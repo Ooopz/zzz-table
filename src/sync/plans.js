@@ -11,6 +11,7 @@ import { normalizeStatKey, substatName, parseNum } from '../lib/util.js';
 import { canonicalize, CATEGORY } from '../lib/names.js';
 import { PERCENT_STATS, mainStatName } from '../lib/constants.js';
 import { validatePlans } from '../lib/schema.js';
+import { slimPlans } from '../lib/plansSlim.js';
 import { requestJson, retry, fetchUid, MHY_UA, MHY_DEVICE } from './mihoyo-api.js';
 import { loadNameIndexes } from './name-index.js';
 
@@ -216,8 +217,15 @@ export async function fetchAllPlans(cookies, { onlyAccount = false, strict = fal
   const stats = { characters: Object.keys(out).length, plans: 0 };
   for (const r of Object.values(out)) stats.plans += r.plans.length;
 
-  // 校验 + 写入 data/plans.json（与 fetchMyCharacters 同模式，供 server 端复用）
-  writeDataFile('plans.json', out, { label: '推荐方案', validate: validatePlans, strict });
+  // 写入 data/plans.json（与 fetchMyCharacters 同模式，供 server 端复用）。
+  // desc/skills 无任何消费（server /api/data 与 publish-release 读盘后都会再过 slimPlans，UI 从未收到它们），
+  // 落盘即 slim + 紧凑（pretty:false）：data/plans.json 从 ~26MB 缩到 ~8MB。validate 走 validatePlans（只查 role.plans 数组）。
+  writeDataFile('plans.json', slimPlans(out), {
+    label: '推荐方案',
+    validate: validatePlans,
+    strict,
+    pretty: false,
+  });
 
   return { data: out, uid, stats };
 }
