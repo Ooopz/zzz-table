@@ -5,4 +5,5 @@ export * from './constants.js';
 export * from './discRules.js';
 export * from './models.js';
 export * from './entityNames.js';
+export * from './characterMeta.js';
 export { coreConsistencyIssues, assertCoreConsistent } from './consistency.js';
