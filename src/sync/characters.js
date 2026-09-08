@@ -3,7 +3,7 @@
 // 输出: data/characters.json（全部角色）+ data/.cookie.json（cookie 缓存）
 
 import readline from 'node:readline';
-import { isMain, writeDataFile, openBrowser, pool } from '../lib/node.js';
+import { isMain, writeDataFile, openBrowser, pool } from '../lib/nodeUtil.js';
 import { parseCookies, parseNum } from '../lib/util.js';
 import { canonicalize, CATEGORY } from '../lib/names.js';
 import { validateCharacters } from '../lib/schema.js';
@@ -11,7 +11,7 @@ import { requestJson, fetchUid, MHY_UA, MHY_DEVICE } from './mihoyo-api.js';
 import { loadNameIndexes } from './name-index.js';
 // cookie 存储（原子写/读取）已收敛到 node.js，此处转发保持既有调用点（plans.js 等 import 本文件）；
 // 本文件内部也要用（fetchMyCharacters 收尾缓存），故用 import + 再 export 双绑定
-import { cacheCookies, readCookieCache } from '../lib/node.js';
+import { cacheCookies, readCookieCache } from '../lib/nodeUtil.js';
 export { cacheCookies, readCookieCache };
 
 // ---------- 名称权威（写时归一） ----------
@@ -246,7 +246,7 @@ export async function fetchMyCharacters(cookies, onProgress, { strict = false } 
   const charList = await fetchCharacterList(cookies, uid);
 
   console.log('⑥ 并发拉取角色详情…（并发 3，避免触发接口风控）');
-  // 复用 lib/node.js 的并发池：结果按下标对齐，顺序与角色列表一致；失败项为 null，最后过滤
+  // 复用 lib/nodeUtil.js 的并发池：结果按下标对齐，顺序与角色列表一致；失败项为 null，最后过滤
   const results = (
     await pool(
       charList,

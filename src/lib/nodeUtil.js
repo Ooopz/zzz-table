@@ -1,4 +1,4 @@
-// src/lib/node.js —— Node 专属工具（依赖 node:child_process / node:fs 等，不要被浏览器 import）
+// src/lib/nodeUtil.js —— Node 专属工具（依赖 node:child_process / node:fs 等，不要被浏览器 import）
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

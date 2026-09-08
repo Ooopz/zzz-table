@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { mergeWorkshopFile, flushPart } from '../src/sync/workshop.js';
-import { iterWorkshopFile, readWorkshopHeader } from '../src/lib/node.js';
+import { iterWorkshopFile, readWorkshopHeader } from '../src/lib/nodeUtil.js';
 
 /** 造一条带中文的真实形状条目；padTo 撑长度以跨越多块 */
 function entryOf(uid, padTo = 0) {

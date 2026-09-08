@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import { writeWorkshopFile, iterWorkshopFile, readWorkshopHeader } from '../src/lib/node.js';
+import { writeWorkshopFile, iterWorkshopFile, readWorkshopHeader } from '../src/lib/nodeUtil.js';
 
 function entryOf(uid, chinese = '孤鹜断霞·测试') {
   return {

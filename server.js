@@ -8,7 +8,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import crypto from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { openBrowser, tryAcquireDataLock, cacheCookies, readCookieCache } from './src/lib/node.js';
+import { openBrowser, tryAcquireDataLock, cacheCookies, readCookieCache, writeJsonAtomic } from './src/lib/nodeUtil.js';
 import { parseCookies } from './src/lib/util.js';
 import { slimPlans } from './src/lib/plansSlim.js';
 import { SYNC_KINDS } from './src/lib/constants.js';
@@ -543,12 +543,8 @@ export const requestHandler = async (req, res) => {
       // 缺 config / 非对象 → 400：无 body 或空 body 时若写默认空配置，会把已保存的目标/覆盖静默清空
       if (typeof config !== 'object' || Array.isArray(config) || !config)
         return respond(res, 400, { ok: false, error: '缺少 config 对象（请求体需带 config 字段）' });
-      // 原子写：直接覆盖时若进程在写入中途退出，会截断用户的目标/备注配置
-      const dir = path.join(ROOT, 'data');
-      fs.mkdirSync(dir, { recursive: true });
-      const tmp = path.join(dir, 'user-config.json.tmp');
-      fs.writeFileSync(tmp, JSON.stringify(config, null, 2), 'utf-8');
-      fs.renameSync(tmp, path.join(dir, 'user-config.json'));
+      // 原子写：直接覆盖时若进程在写入中途退出，会截断用户的目标/备注配置（复用 node.js 的 writeJsonAtomic）
+      writeJsonAtomic(path.join(ROOT, 'data', 'user-config.json'), config);
       return respond(res, 200, { ok: true });
     }
     if (req.method === 'POST' && url === '/api/cookie') {

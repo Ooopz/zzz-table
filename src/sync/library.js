@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { stripHtml, normalizeStatKey, normalizeStatKeys, parseNum, decodeHtmlEntities } from '../lib/util.js';
 import { validateLibrary } from '../lib/schema.js';
-import { isMain, writeDataFile, DATA_DIR, pool } from '../lib/node.js';
+import { isMain, writeDataFile, DATA_DIR, pool } from '../lib/nodeUtil.js';
 import { requestJson, retry } from './mihoyo-api.js';
 
 // ---------- 图片本地化（原 library-img.js 合并进来） ----------

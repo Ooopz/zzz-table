@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { DATA_DIR, writeJsonAtomic, tryAcquireDataLock } from '../src/lib/node.js';
+import { DATA_DIR, writeJsonAtomic, tryAcquireDataLock } from '../src/lib/nodeUtil.js';
 
 const argVal = (k) => {
   const a = process.argv.find((x) => x.startsWith('--' + k + '='));
@@ -96,7 +96,7 @@ async function main() {
     // 一次性迁移：现有 workshop.json（旧双格式）→ 规范格式（normalizeEntry，纯函数）
     // source 按 equips rarity 类型回填（实测 100% 覆盖）；重爬时写盘路径已自动走同一 normalizeEntry，无需再次迁移
     const { normalizeEntry } = await import('../src/sync/workshop.js');
-    const { iterWorkshopFile, writeWorkshopFile } = await import('../src/lib/node.js');
+    const { iterWorkshopFile, writeWorkshopFile } = await import('../src/lib/nodeUtil.js');
     const { OUT_FILE } = await import('../src/sync/workshop-stats.js');
     const t0 = Date.now();
     let total = 0;

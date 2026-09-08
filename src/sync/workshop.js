@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { romanNumeralUnicode, normalizeStatKey } from '../lib/util.js';
 import { canonicalName, CATEGORY } from '../lib/names.js';
-import { iterWorkshopFile, readLines, writeWorkshopFile, DATA_DIR, pool, writeJsonAtomic } from '../lib/node.js';
+import { iterWorkshopFile, readLines, writeWorkshopFile, DATA_DIR, pool, writeJsonAtomic } from '../lib/nodeUtil.js';
 import { apiGet, apiPost } from './workshop-api.js';
 import { buildWorkshopStats, fetchWorkshopGrad, OUT_FILE } from './workshop-stats.js';
 import { computeEnkaPanel, propName, RARITY_GROWTH } from './workshop-panel.js';

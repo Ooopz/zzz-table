@@ -5,7 +5,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { DATA_DIR, isMain, writeDataFile, pool } from '../lib/node.js';
+import { DATA_DIR, isMain, writeDataFile, pool } from '../lib/nodeUtil.js';
 import { readCookieCache } from './characters.js';
 import { normalizeStatKey, substatName, parseNum } from '../lib/util.js';
 import { canonicalize, CATEGORY } from '../lib/names.js';

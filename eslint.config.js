@@ -35,7 +35,7 @@ export default [
   },
   {
     // Node 侧：服务器、同步脚本、Node 专属工具、测试
-    files: ['server.js', 'src/sync/**/*.js', 'src/lib/node.js', 'test/**/*.js'],
+    files: ['server.js', 'src/sync/**/*.js', 'src/lib/nodeUtil.js', 'test/**/*.js'],
     languageOptions: { globals: globals.node },
   },
   {

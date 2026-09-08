@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildNameIndex, resolveEntry, CATEGORY } from '../lib/names.js';
-import { DATA_DIR } from '../lib/node.js';
+import { DATA_DIR } from '../lib/nodeUtil.js';
 
 /** 空名称索引（library.json 缺失/损坏时的兜底构造：不归一、不崩）；workshop/workshop-stats 共用，勿各写一份 */
 export function emptyNameIndexes() {

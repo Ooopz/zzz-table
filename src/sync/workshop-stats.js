@@ -8,7 +8,7 @@ import { validateWorkshopStats } from '../lib/validateWorkshopStats.js';
 import { orderComboSets4First } from '../lib/plansStats.js';
 import { romanNumeralUnicode } from '../lib/util.js';
 import { resolveEntry, canonicalName, CATEGORY } from '../lib/names.js';
-import { iterWorkshopFile, readWorkshopHeader, DATA_DIR, pool, writeJsonAtomic } from '../lib/node.js';
+import { iterWorkshopFile, readWorkshopHeader, DATA_DIR, pool, writeJsonAtomic } from '../lib/nodeUtil.js';
 import { apiGet } from './workshop-api.js';
 import { loadNameIndexes, emptyNameIndexes, resolveWengineName } from './name-index.js';
 

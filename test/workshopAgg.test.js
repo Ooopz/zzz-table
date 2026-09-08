@@ -17,7 +17,7 @@ import {
 import { substatRolls } from '../src/lib/discRules.js';
 import { buildNameIndex, CATEGORY } from '../src/lib/names.js';
 import { normalizeStatKey } from '../src/lib/util.js';
-import { iterWorkshopFile } from '../src/lib/node.js';
+import { iterWorkshopFile } from '../src/lib/nodeUtil.js';
 import { loadDataFile } from './helpers.js';
 
 test('normalizeStatKey：workshop 别名吸收（归一化后词条名已是规范名，幂等）', () => {
