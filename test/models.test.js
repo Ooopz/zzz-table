@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Character, Wengine, Disc, toInstances } from '../src/lib/models.js';
+import { Character, Wengine, Disc, toInstances } from '../src/game/index.js';
 import { buildNameIndex, CATEGORY } from '../src/lib/names.js';
 import { setCalcContext } from '../src/lib/calc.js';
 import { loadDataFile } from './helpers.js';

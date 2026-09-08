@@ -15,7 +15,7 @@ import {
   MIN_MAIN_COUNT,
 } from '../src/lib/discCleaner.js';
 import { loadDataFile } from './helpers.js';
-import { MAIN_STAT_OPTIONS } from '../src/lib/constants.js';
+import { MAIN_STAT_OPTIONS } from '../src/game/index.js';
 
 // 实况 fixture：1000 块盘，覆盖 keep（高频）/ 实况缺失但规则 keep → cond / 规则 drop → drop
 const DETAIL = {

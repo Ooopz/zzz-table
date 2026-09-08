@@ -1,8 +1,8 @@
 // src/web/data.js —— 数据层：由 main.js 注入数据（不再从 DOM 内嵌块读取），维护索引/配置/过滤
 import { statEntries, escapeHtml } from '../lib/util.js';
 import { buildNameIndex, canonicalize, CATEGORY } from '../lib/names.js';
-import { Character, Wengine, Disc, toInstances } from '../lib/models.js';
-import { SUBSTAT_TYPE_SET, TARGET_KEYS, LEGACY_VIEW_MAP } from '../lib/constants.js';
+import { Character, Wengine, Disc, toInstances } from '../game/index.js';
+import { SUBSTAT_TYPE_SET, TARGET_KEYS, LEGACY_VIEW_MAP } from '../game/index.js';
 import { apiRequest, postJSON, notify } from './api.js';
 
 // ---------- 数据（由 setData 注入） ----------

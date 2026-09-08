@@ -9,13 +9,13 @@ import {
   buildTypes,
   roleWeightsFromWs,
   DEFAULT_WEIGHTS,
-} from '../src/lib/discRules.js';
+} from '../src/game/index.js';
 import {
   MAIN_STAT_OPTIONS,
   DISC_MAIN_PROB_WEIGHTS,
   DISC_SUBSTATS,
   DISC_SUBSTAT_SPECIAL_WEIGHTS,
-} from '../src/lib/constants.js';
+} from '../src/game/index.js';
 
 test('passChance：强化成长通过率（确定性手算）', () => {
   // 词条 [1,1]（两条权重 1），2 次成长：nowAdd 恒为 2

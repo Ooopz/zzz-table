@@ -11,7 +11,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { openBrowser, tryAcquireDataLock, cacheCookies, readCookieCache, writeJsonAtomic } from './src/lib/nodeUtil.js';
 import { parseCookies } from './src/lib/util.js';
 import { slimPlans } from './src/lib/plansSlim.js';
-import { SYNC_KINDS } from './src/lib/constants.js';
+import { SYNC_KINDS } from './src/game/index.js';
 
 const PORT = process.env.PORT || 8719;
 // 仅监听回环地址：data/ 下有明文 cookie 与个人配置，绝不能暴露到局域网；

@@ -6,7 +6,7 @@
 // 适配角色：4件套 官方侧用官方 wiki 推荐（library.discs[].recommend，干净）、2件套 侧仅实况。
 // 三级判定：保留 = 实况保留率达标 / 视词条而定 = 职业规则推荐但玩家使用少（泛用2件套/未来套/次选）/
 // 分解 = 实况极少用且规则不推荐。
-import { STAT, SUBSTAT, MAIN_STAT_OPTIONS, DISC_SUBSTATS, isDamageBonus } from './constants.js';
+import { STAT, SUBSTAT, MAIN_STAT_OPTIONS, DISC_SUBSTATS, isDamageBonus } from '../game/index.js';
 
 /** 槽位 5 号位「属性伤害加成」通配标记：匹配任意「X属性伤害加成」主词条（物理/火/冰/电/以太/风 + 未来元素） */
 const ELEMENT = Symbol('element');

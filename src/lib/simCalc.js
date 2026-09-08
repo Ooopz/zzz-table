@@ -4,7 +4,7 @@
 
 import { resolveEntry, CATEGORY } from './names.js';
 import { panelBonus, coreSkillBoostAt, substatGrowthTable, accumulateBonus } from './calc.js';
-import { PANEL_ORDER, STAT, SUBSTAT } from './constants.js';
+import { PANEL_ORDER, STAT, SUBSTAT } from '../game/index.js';
 import { statEntries, pierceStat } from './util.js';
 
 const S = substatGrowthTable.S;

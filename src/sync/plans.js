@@ -9,7 +9,7 @@ import { DATA_DIR, isMain, writeDataFile, pool } from '../lib/nodeUtil.js';
 import { readCookieCache } from './characters.js';
 import { normalizeStatKey, substatName, parseNum } from '../lib/util.js';
 import { canonicalize, CATEGORY } from '../lib/names.js';
-import { PERCENT_STATS, mainStatName } from '../lib/constants.js';
+import { PERCENT_STATS, mainStatName } from '../game/index.js';
 import { validatePlans } from '../lib/schema.js';
 import { slimPlans } from '../lib/plansSlim.js';
 import { requestJson, retry, fetchUid, MHY_UA, MHY_DEVICE } from './mihoyo-api.js';

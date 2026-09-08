@@ -25,7 +25,7 @@ import {
   percentSubstats,
 } from '../lib/calc.js';
 import { escapeHtml, escapeJsAttr, formatValue, createSort } from '../lib/util.js';
-import { STAT } from '../lib/constants.js';
+import { STAT } from '../game/index.js';
 import { discSetEffectsHtml, substatRollsMark } from './shared.js';
 import { mountCharts } from './charts.js';
 

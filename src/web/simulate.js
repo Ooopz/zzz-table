@@ -9,7 +9,7 @@ import {
   readCharTarget,
   sortRoleNames,
 } from './data.js';
-import { PANEL_ORDER, MAIN_STAT_OPTIONS, TARGET_KEYS, STAT } from '../lib/constants.js';
+import { PANEL_ORDER, MAIN_STAT_OPTIONS, TARGET_KEYS, STAT } from '../game/index.js';
 import {
   simulateFrontier3D,
   simulateFrontierLevels,

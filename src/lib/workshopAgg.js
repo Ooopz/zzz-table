@@ -4,8 +4,8 @@
 import { computeDist, quantileSorted } from './distStats.js';
 import { canonicalName, CATEGORY } from './names.js';
 import { normalizeStatKey } from './util.js';
-import { mainStatName, SUBSTAT_TYPE_SET, MAIN_STAT_OPTIONS, OFFICIAL_SKILL_TYPE } from './constants.js';
-import { substatRolls } from './discRules.js';
+import { mainStatName, SUBSTAT_TYPE_SET, MAIN_STAT_OPTIONS, OFFICIAL_SKILL_TYPE } from '../game/index.js';
+import { substatRolls } from '../game/index.js';
 
 /** 面板 final 值归一化：百分比字符串（"31.4%" → 0.314）与数值字符串/数字统一为数字；空串/纯空白 → null（缺失，不污染 min/count） */
 function parsePanelFinal(v) {

@@ -14,7 +14,7 @@ import {
   computeRoleOwnership,
   computeSkillLevelModes,
 } from '../src/lib/workshopAgg.js';
-import { substatRolls } from '../src/lib/discRules.js';
+import { substatRolls } from '../src/game/index.js';
 import { buildNameIndex, CATEGORY } from '../src/lib/names.js';
 import { normalizeStatKey } from '../src/lib/util.js';
 import { iterWorkshopFile } from '../src/lib/nodeUtil.js';

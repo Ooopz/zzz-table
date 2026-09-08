@@ -4,7 +4,7 @@ import { library } from './data.js';
 import { escapeHtml, escapeJsAttr, statEntries, formatValue, isEmptyVal, createSort } from '../lib/util.js';
 import { richWeb } from './visual.js';
 import { maxLevelStats, panelOrder } from '../lib/calc.js';
-import { STAT, SUBSTAT } from '../lib/constants.js';
+import { STAT, SUBSTAT } from '../game/index.js';
 import { richItemHtml, skillIcon, registerZZZ, tableHtml } from './shared.js';
 import { renderMetaOverview } from './metaOverview.js';
 

@@ -15,10 +15,10 @@ import {
   TARGET_PERCENTS,
   SKILL,
   isDamageBonus as isDamageBonusName,
-} from './constants.js';
+} from '../game/index.js';
 // 驱动盘领域规则（成长表/形态判定/成长次数/有效命中）权威在 discRules.js：
 // substatGrowthTable / discGrowth 经此转发保持既有 import 链；discHits 已不收（命中统计经 Disc.getHitCount 走 discRules C3）；substatType 消费方直接 import discRules.js
-import { substatGrowthTable, discGrowth } from './discRules.js';
+import { substatGrowthTable, discGrowth } from '../game/index.js';
 export { substatGrowthTable, discGrowth };
 
 // ---------- 数据上下文（由调用方注入） ----------

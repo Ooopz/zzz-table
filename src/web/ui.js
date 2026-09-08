@@ -9,7 +9,7 @@ import {
   mainStatName,
   VIEWS,
   EFFECTIVE_SUBSTAT_OPTIONS,
-} from '../lib/constants.js';
+} from '../game/index.js';
 import { notify } from './api.js';
 import {
   readCharTarget,

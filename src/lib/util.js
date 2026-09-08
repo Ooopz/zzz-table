@@ -1,6 +1,6 @@
 // src/lib/util.js —— 环境无关的纯工具函数（Node 与浏览器共用）
 // ⚠️ 禁止 import 任何 node: 模块（浏览器会直接 import 它）；Node 专属函数（如 openBrowser）放 ./node.js
-import { STAT } from './constants.js';
+import { STAT } from '../game/index.js';
 
 /** 去 HTML 标签，折叠空白 */
 export function stripHtml(html) {

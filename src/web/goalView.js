@@ -25,7 +25,7 @@ import {
 } from './wsRoles.js';
 import { synthTarget, toTargetDisplay } from '../lib/goalAdvisor.js';
 import { resolveStatCurrent, targetGap, attrsOfTypes, percentSubstats } from '../lib/calc.js';
-import { PANEL_ORDER, SKILL_TYPES, OFFICIAL_SKILL_TYPE, TARGET_PERCENTS } from '../lib/constants.js';
+import { PANEL_ORDER, SKILL_TYPES, OFFICIAL_SKILL_TYPE, TARGET_PERCENTS } from '../game/index.js';
 import { resolveEntry, CATEGORY } from '../lib/names.js';
 import { escapeHtml, escapeJsAttr, formatValue } from '../lib/util.js';
 import { richWeb } from './visual.js';

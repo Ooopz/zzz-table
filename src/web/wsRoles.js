@@ -4,7 +4,7 @@
 import { plans, workshopGrad, workshopStats, charIndex, statsMissingData, myCharacters, wengineIndex } from './data.js';
 import { computeRecTierStats } from '../lib/panelBench.js';
 import { CHAR_ALIASES, canonicalName, CATEGORY, resolveEntry } from '../lib/names.js';
-import { SKILL_TYPES, OFFICIAL_SKILL_TYPE } from '../lib/constants.js';
+import { SKILL_TYPES, OFFICIAL_SKILL_TYPE } from '../game/index.js';
 import { emptyState } from './shared.js';
 
 /** 统一空态转发（缺数据源时给对应同步指引） */

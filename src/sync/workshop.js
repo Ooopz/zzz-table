@@ -13,7 +13,7 @@ import { computeEnkaPanel, propName, RARITY_GROWTH } from './workshop-panel.js';
 import { items } from './workshop-static.js'; // 装备表（buildCtx 的 ctx.items 供 2025 源配装映射）
 import { loadNameIndexes, emptyNameIndexes, resolveWengineName } from './name-index.js';
 import { sleep } from './mihoyo-api.js';
-import { WS_KEY_TO_STAT } from '../lib/constants.js';
+import { WS_KEY_TO_STAT } from '../game/index.js';
 
 const WEIGHTS_FILE = path.join(DATA_DIR, 'workshop-weights.json'); // 角色默认流派权重（工坊有效词条口径）
 // 名称索引（统一 resolver，library.json 为权威源）：工坊 nick_name 差异在写时解析回 wiki 标准名，保证与 library/plans 一致；

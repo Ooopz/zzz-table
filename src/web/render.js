@@ -1,7 +1,7 @@
 // src/web/render.js —— 渲染调度：全局悬浮提示 + 主视图分发
 // 「我的角色」汇总渲染与拖拽排序在 myChars.js；资料视图各库归 wiki.js（总览子面板 metaOverview.js）、驱动盘工作台 discstats.js、模拟 simulate.js。
 import { grid, myCharacters, userConfig, isStatic, sortRoleNames, saveUserConfig } from './data.js';
-import { VIEWS, VIEW_VALUES } from '../lib/constants.js';
+import { VIEWS, VIEW_VALUES } from '../game/index.js';
 import { renderWiki, toggleWikiSort } from './wiki.js';
 import { renderDrivenDiscs } from './discstats.js';
 import { renderSimulate } from './simulate.js';

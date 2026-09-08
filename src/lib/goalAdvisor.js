@@ -1,7 +1,7 @@
 // src/lib/goalAdvisor.js —— 练度规划纯逻辑（Node 与浏览器共用）：
 // 目标值合成：方案档位 median × 玩家样本分布，P20 单边地板（只托底不封顶），逐属性回退链。
 // （原 ② 缺口合并 / 逐槽刷盘规划 / 补齐路线已随「提升规划」区块下线删除。）
-import { TARGET_PERCENTS } from './constants.js';
+import { TARGET_PERCENTS } from '../game/index.js';
 import { approxPercentile, DIST_Q_KEYS, DIST_Q_FRACS } from './distStats.js';
 
 /** 目标合成默认参数：可达性地板分位（低于它的方案意图值提到该分位）与单盘命中理论上限 */

@@ -3,7 +3,7 @@
 // 入口 initSync() 绑定弹窗按钮（ui.js 的 initUi 调用）；syncWorkshopData 供「工坊更新」快捷入口复用。
 import { escapeHtml } from '../lib/util.js';
 import { apiRequest, postJSON, notify } from './api.js';
-import { SYNC_KINDS } from '../lib/constants.js';
+import { SYNC_KINDS } from '../game/index.js';
 import { isStatic, importCharacters, clearLocalChars, myCharacters } from './data.js';
 import { render } from './render.js';
 

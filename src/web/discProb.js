@@ -17,7 +17,7 @@ import {
   MAIN_STAT_OPTIONS,
   mainStatName,
   FIXED_SUBSTATS,
-} from '../lib/constants.js';
+} from '../game/index.js';
 // discRules 领域规则符号（按规则组标注：A5/H1 主词条与副词条池、A3/A4 成长表、D1-D4 权重、B/E 生成模型与保词条）
 import {
   // A5：123 号位主词条固定；H1：副词条池配对/展示顺序
@@ -35,7 +35,7 @@ import {
   // B/E：生成模型与保词条比较
   computePosProb,
   computePosProbKeep,
-} from '../lib/discRules.js';
+} from '../game/index.js';
 import { escapeHtml, formatValue } from '../lib/util.js';
 import { registerZZZ } from './shared.js';
 import { chartBox, dpProbBarOption } from './charts.js';
