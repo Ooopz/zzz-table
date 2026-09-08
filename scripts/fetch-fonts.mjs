@@ -1,4 +1,4 @@
-// scripts/fetch-fonts.mjs —— 下载 OFL 开源字体（Barlow Condensed 西文展示体 + Noto Sans SC 中文可变体）到 src/fonts/
+// scripts/fetch-fonts.mjs —— 下载 OFL 开源字体（Barlow Condensed 西文展示体 + Noto Sans SC 中文可变体）到 assets/fonts/
 // 用法：node scripts/fetch-fonts.mjs [proxyHost] [proxyPort]；默认走本地代理 127.0.0.1:7897
 // （Windows 沙箱 Schannel 拿不到凭据、undici 不认环境代理，故手写 HTTP CONNECT 隧道 + OpenSSL 栈，最稳）
 import net from 'node:net';
@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const DIR = join(ROOT, 'src', 'fonts');
+const DIR = join(ROOT, 'assets', 'fonts');
 const PROXY_HOST = process.argv[2] || '127.0.0.1';
 const PROXY_PORT = Number(process.argv[3] || 7897);
 

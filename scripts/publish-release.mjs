@@ -136,13 +136,13 @@ async function buildRelease() {
     console.log('  字体子集字符数:', [...chars].length);
     try {
       const subsetFont = (await import('subset-font')).default;
-      const src = readFileSync(join(ROOT, 'src/fonts/NotoSansSC-Variable.ttf'));
+      const src = readFileSync(join(ROOT, 'assets/fonts/NotoSansSC-Variable.ttf'));
       const out = await subsetFont(src, [...chars].join(''), { targetFormat: 'truetype' });
       writeFileSync(join(REL, '_noto-subset.ttf'), out);
       console.log('  Noto Sans SC 子集化:', src.length, '→', out.length, 'bytes');
     } catch (e) {
       console.warn('  ⚠️ 字体子集化失败（' + (e && e.message) + '），用原字体（更大）。');
-      cpSync(join(ROOT, 'src/fonts/NotoSansSC-Variable.ttf'), join(REL, '_noto-subset.ttf'));
+      cpSync(join(ROOT, 'assets/fonts/NotoSansSC-Variable.ttf'), join(REL, '_noto-subset.ttf'));
     }
   }
 
@@ -153,7 +153,7 @@ async function buildRelease() {
   let appJs = output[0].code;
   await bundle.close();
 
-  // 4. 技能图标 base64 内联（JS 里硬编码 '/src/img/xxx.png' → data URL）
+  // 4. 技能图标 base64 内联（JS 里硬编码 '/assets/img/xxx.png' → data URL）
   {
     const ICONS = [
       'normal',
@@ -167,10 +167,10 @@ async function buildRelease() {
       'bangboo-chain',
     ];
     for (const name of ICONS) {
-      const p = join(ROOT, 'src/img', name + '.png');
+      const p = join(ROOT, 'assets/img', name + '.png');
       if (!existsSync(p)) continue;
       const b64 = readFileSync(p).toString('base64');
-      appJs = appJs.split(`'/src/img/${name}.png'`).join(`'data:image/png;base64,${b64}'`);
+      appJs = appJs.split(`'/assets/img/${name}.png'`).join(`'data:image/png;base64,${b64}'`);
     }
   }
 
@@ -182,15 +182,15 @@ async function buildRelease() {
   const collectSrc = readFileSync(join(ROOT, 'src/web/collect.js'), 'utf8');
   const FONTS = ['BarlowCondensed-SemiBold.ttf', 'BarlowCondensed-Bold.ttf', 'BarlowCondensed-Black.ttf'];
   const fontB64 = {};
-  for (const f of FONTS) fontB64[f] = readFileSync(join(ROOT, 'src/fonts', f)).toString('base64');
+  for (const f of FONTS) fontB64[f] = readFileSync(join(ROOT, 'assets/fonts', f)).toString('base64');
   fontB64['NotoSansSC-Variable.ttf'] = readFileSync(join(REL, '_noto-subset.ttf')).toString('base64');
   const cssInline = css.replace(
-    /url\('src\/fonts\/([^']+)'\)/g,
+    /url\('assets\/fonts\/([^']+)'\)/g,
     (m, f) => `url('data:font/ttf;base64,${fontB64[f] || ''}')`
   );
   const escScript = (code) => code.replace(/<\/script/gi, '<\\/script');
-  const vendor = (f) => escScript(readFileSync(join(ROOT, 'src/vendor', f), 'utf8'));
-  const faviconB64 = readFileSync(join(ROOT, 'src/img/logo.webp')).toString('base64');
+  const vendor = (f) => escScript(readFileSync(join(ROOT, 'assets/vendor', f), 'utf8'));
+  const faviconB64 = readFileSync(join(ROOT, 'assets/img/logo.webp')).toString('base64');
   const collectLiteral = JSON.stringify(collectSrc).replace(/<\/script/gi, '<\\/script'); // 与 escScript 同款：防 `</script` 提前闭合 <script> 块
   html = html
     .replace(

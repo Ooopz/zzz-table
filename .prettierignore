@@ -3,5 +3,5 @@ data
 package-lock.json
 .eslintrc*
 src/sync/workshop-static.js
-src/vendor/echarts.min.js
-src/vendor/echarts-gl.min.js
+assets/vendor/echarts.min.js
+assets/vendor/echarts-gl.min.js

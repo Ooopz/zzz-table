@@ -13,28 +13,28 @@
    - 表格/卡片/弹窗/图表卡的视觉收敛为各自一套基座，见各区块注释
    ============================================================ */
 
-/* ---------- 字体（OFL 开源字体，本地打包 src/fonts/） ---------- */
+/* ---------- 字体（OFL 开源字体，本地打包 assets/fonts/） ---------- */
 @font-face {
   font-family: 'Barlow Condensed';
-  src: url('src/fonts/BarlowCondensed-SemiBold.ttf') format('truetype');
+  src: url('assets/fonts/BarlowCondensed-SemiBold.ttf') format('truetype');
   font-weight: 600;
   font-display: swap;
 }
 @font-face {
   font-family: 'Barlow Condensed';
-  src: url('src/fonts/BarlowCondensed-Bold.ttf') format('truetype');
+  src: url('assets/fonts/BarlowCondensed-Bold.ttf') format('truetype');
   font-weight: 700;
   font-display: swap;
 }
 @font-face {
   font-family: 'Barlow Condensed';
-  src: url('src/fonts/BarlowCondensed-Black.ttf') format('truetype');
+  src: url('assets/fonts/BarlowCondensed-Black.ttf') format('truetype');
   font-weight: 900;
   font-display: swap;
 }
 @font-face {
   font-family: 'Noto Sans SC Variable';
-  src: url('src/fonts/NotoSansSC-Variable.ttf') format('truetype-variations');
+  src: url('assets/fonts/NotoSansSC-Variable.ttf') format('truetype-variations');
   font-weight: 100 900;
   font-display: swap;
 }

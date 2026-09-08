@@ -352,11 +352,11 @@ function renderBangboos() {
     return b[key] ?? null;
   };
   const rows = sortRows(Object.values(library.bangboos), bangVal).map((b) => {
-    // 技能：主动/连携/被动 三图标（src/img/bangboo-*.png），悬浮看说明、点击开每级数值弹窗
+    // 技能：主动/连携/被动 三图标（assets/img/bangboo-*.png），悬浮看说明、点击开每级数值弹窗
     const skillDefs = [
-      { type: '主动技', icon: '/src/img/bangboo-active.png', label: '主动' },
-      { type: '被动技', icon: '/src/img/bangboo-passive.png', label: '被动' },
-      { type: '连携技', icon: '/src/img/bangboo-chain.png', label: '连携' },
+      { type: '主动技', icon: '/assets/img/bangboo-active.png', label: '主动' },
+      { type: '被动技', icon: '/assets/img/bangboo-passive.png', label: '被动' },
+      { type: '连携技', icon: '/assets/img/bangboo-chain.png', label: '连携' },
     ];
     const skillsHtml = skillDefs
       .map(({ type, icon, label }) => {

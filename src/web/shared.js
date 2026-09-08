@@ -40,12 +40,12 @@ export function richItemHtml(title, desc) {
 
 // ---------- 技能图标（数字 type 与字符串键共用同一路径表） ----------
 const SKILL_ICON = {
-  normal: '/src/img/normal.png',
-  dodge: '/src/img/dodge.png',
-  support: '/src/img/support.png',
-  special: '/src/img/special.png',
-  ultimate: '/src/img/ultimate.png',
-  core: '/src/img/passive.png',
+  normal: '/assets/img/normal.png',
+  dodge: '/assets/img/dodge.png',
+  support: '/assets/img/support.png',
+  special: '/assets/img/special.png',
+  ultimate: '/assets/img/ultimate.png',
+  core: '/assets/img/passive.png',
 };
 export function skillIcon(key) {
   return SKILL_ICON[key] || SKILL_ICON.core;

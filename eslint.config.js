@@ -8,7 +8,7 @@ export default [
     ignores: [
       'node_modules/**',
       'data/**',
-      'src/vendor/**',
+      'assets/vendor/**',
       'src/sync/workshop-static.js',
       'package-lock.json',
       'release/**',
