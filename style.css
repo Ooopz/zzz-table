@@ -1152,6 +1152,13 @@ main {
   font-size: var(--fs-3xs);
   color: var(--dim);
 }
+/* 属性/职业/稀有度 单元格小图标（data-detail 悬浮显中文名） */
+.meta-ico {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  vertical-align: middle;
+}
 /* 影画/觉醒格：每行 6 格，有觉醒的角色两行（影画 + 觉醒） */
 .wiki-ms {
   vertical-align: middle;

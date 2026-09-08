@@ -156,15 +156,35 @@ async function buildRelease() {
   // 4. 技能图标 base64 内联（JS 里硬编码 '/assets/img/xxx.png' → data URL）
   {
     const ICONS = [
-      'normal',
-      'dodge',
-      'support',
-      'special',
-      'ultimate',
-      'passive',
+      'skill-normal',
+      'skill-dodge',
+      'skill-support',
+      'skill-special',
+      'skill-ultimate',
+      'skill-passive',
       'bangboo-active',
       'bangboo-passive',
       'bangboo-chain',
+      // 属性/职业/稀有度 小图标（shared.js metaIconHtml/rankIconHtml 引用）
+      'rank-A',
+      'rank-S',
+      'element-electric',
+      'element-ice',
+      'element-fire',
+      'element-physical',
+      'element-wind',
+      'element-ether',
+      'element-lumiflux',
+      'element-frostblade',
+      'element-ink',
+      'element-rime',
+      'trait-vanguard',
+      'trait-attack',
+      'trait-stun',
+      'trait-support',
+      'trait-defense',
+      'trait-anomaly',
+      'trait-pierce',
     ];
     for (const name of ICONS) {
       const p = join(ROOT, 'assets/img', name + '.png');

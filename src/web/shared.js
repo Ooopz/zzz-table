@@ -40,15 +40,50 @@ export function richItemHtml(title, desc) {
 
 // ---------- 技能图标（数字 type 与字符串键共用同一路径表） ----------
 const SKILL_ICON = {
-  normal: '/assets/img/normal.png',
-  dodge: '/assets/img/dodge.png',
-  support: '/assets/img/support.png',
-  special: '/assets/img/special.png',
-  ultimate: '/assets/img/ultimate.png',
-  core: '/assets/img/passive.png',
+  normal: '/assets/img/skill-normal.png',
+  dodge: '/assets/img/skill-dodge.png',
+  support: '/assets/img/skill-support.png',
+  special: '/assets/img/skill-special.png',
+  ultimate: '/assets/img/skill-ultimate.png',
+  core: '/assets/img/skill-passive.png',
 };
 export function skillIcon(key) {
   return SKILL_ICON[key] || SKILL_ICON.core;
+}
+
+// ---------- 属性/职业/稀有度 图标（中文字段值 → assets/img 英文名；未知值回退文字） ----------
+const META_ICON = {
+  电: '/assets/img/element-electric.png',
+  冰: '/assets/img/element-ice.png',
+  火: '/assets/img/element-fire.png',
+  物理: '/assets/img/element-physical.png',
+  风: '/assets/img/element-wind.png',
+  以太: '/assets/img/element-ether.png',
+  流明: '/assets/img/element-lumiflux.png',
+  凛刃: '/assets/img/element-frostblade.png',
+  玄墨: '/assets/img/element-ink.png',
+  烈霜: '/assets/img/element-rime.png',
+  锋御: '/assets/img/trait-vanguard.png',
+  强攻: '/assets/img/trait-attack.png',
+  击破: '/assets/img/trait-stun.png',
+  支援: '/assets/img/trait-support.png',
+  防护: '/assets/img/trait-defense.png',
+  异常: '/assets/img/trait-anomaly.png',
+  命破: '/assets/img/trait-pierce.png',
+};
+const RANK_ICON = { S: '/assets/img/rank-S.png', A: '/assets/img/rank-A.png' };
+/** 属性/职业值 → 小图标 <img>（悬浮 data-detail 显中文名）；无图标/空值返回 ''，调用方回退文字 */
+export function metaIconHtml(value) {
+  const src = META_ICON[value];
+  if (!src) return '';
+  const esc = escapeHtml(value);
+  return `<img class="meta-ico" src="${src}" alt="${esc}" title="${esc}" data-detail="${esc}">`;
+}
+/** 稀有度（S/A）→ 小图标；B 及未知返回 '' */
+export function rankIconHtml(rank) {
+  const src = RANK_ICON[rank];
+  if (!src) return '';
+  return `<img class="meta-ico" src="${src}" alt="${escapeHtml(rank)}" title="${escapeHtml(rank)}" data-detail="${escapeHtml(rank)}">`;
 }
 /** 把对象合并进 window.ZZZ（内联 onclick 引用的全局注册，wiki/ui 共用） */
 export function registerZZZ(obj) {

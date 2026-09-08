@@ -5,7 +5,7 @@ import { escapeHtml, escapeJsAttr, statEntries, formatValue, isEmptyVal, createS
 import { richWeb } from './visual.js';
 import { maxLevelStats, panelOrder } from '../lib/calc.js';
 import { STAT, SUBSTAT } from '../game/index.js';
-import { richItemHtml, skillIcon, registerZZZ, tableHtml } from './shared.js';
+import { richItemHtml, skillIcon, registerZZZ, tableHtml, metaIconHtml, rankIconHtml } from './shared.js';
 import { renderMetaOverview } from './metaOverview.js';
 
 export let wikiTab = 'characters';
@@ -54,12 +54,12 @@ const CHAR_SORTABLE = new Set([
   '名称',
   '稀有度',
   '属性',
-  '特性',
+  '职业',
   '阵营',
   ...INITIAL_STATS,
   ...MAX_STATS.map((s) => `满级${s}`),
 ]);
-const WENGINE_SORTABLE = new Set(['名称', '稀有度', '特性', '基础攻击']);
+const WENGINE_SORTABLE = new Set(['名称', '稀有度', '职业', '主属性']);
 const DISC_SORTABLE = new Set(['名称']);
 const BANG_SORTABLE = new Set(['名称', '稀有度', '属性', ...BANG_INITIAL_STATS, ...MAX_STATS.map((s) => `满级${s}`)]);
 
@@ -202,7 +202,7 @@ function renderCharacters() {
     '名称',
     '稀有度',
     '属性',
-    '特性',
+    '职业',
     '阵营',
     '技能',
     '影画',
@@ -213,7 +213,7 @@ function renderCharacters() {
     if (key === '名称') return c.name;
     if (key === '稀有度') return RARITY_RANK[c.rarity] ?? 0;
     if (key === '属性') return c.element;
-    if (key === '特性') return c.trait;
+    if (key === '职业') return c.trait;
     if (key === '阵营') return c.faction;
     if (key.startsWith('满级')) return c.maxLevel?.[key.slice(2)] ?? null;
     if (key === STAT.PEN_RATE) return penCell(c);
@@ -280,9 +280,9 @@ function renderCharacters() {
     return `<tr>
       <td class="wiki-tight">${c.icon ? `<img class="wiki-ico" src="${c.icon}" data-fallback="${c.iconUrl || ''}" alt="">` : ''}</td>
       <td class="wiki-name">${escapeHtml(c.name)}</td>
-      <td class="wiki-tight">${escapeHtml(c.rarity)}</td>
-      <td class="wiki-tight">${escapeHtml(c.element)}</td>
-      <td class="wiki-tight">${escapeHtml(c.trait)}</td>
+      <td class="wiki-tight">${rankIconHtml(c.rarity) || escapeHtml(c.rarity)}</td>
+      <td class="wiki-tight">${metaIconHtml(c.element) || escapeHtml(c.element)}</td>
+      <td class="wiki-tight">${metaIconHtml(c.trait) || escapeHtml(c.trait)}</td>
       <td class="wiki-faction">${escapeHtml(c.faction)}</td>
       <td class="wiki-icons">${skillsHtml}</td>
       <td class="wiki-ms"><div class="wiki-ms-row">${cinemasHtml}</div>${awakenHtml ? `<div class="wiki-ms-row">${awakenHtml}</div>` : ''}</td>
@@ -294,24 +294,26 @@ function renderCharacters() {
 }
 
 function renderWengines() {
-  const headers = ['图标', '名称', '稀有度', '特性', '基础攻击', '副属性', '特效'];
+  const headers = ['图标', '名称', '稀有度', '职业', '主属性', '副属性', '特效'];
   const wengineVal = (w, key) => {
     if (key === '名称') return w.name;
     if (key === '稀有度') return RARITY_RANK[w.rarity] ?? 0;
-    if (key === '特性') return w.trait;
-    if (key === '基础攻击') return w.baseAtk;
+    if (key === '职业') return w.trait;
+    if (key === '主属性') return w.baseAtk ?? w.baseDef; // 主值可为攻击力或（2026 锋御音擎）防御力
     return w[key] ?? null;
   };
   const rows = sortRows(Object.values(library.wengines), wengineVal).map((w) => {
     const sub = statEntries(w.subStats)
       .map((t) => `${t.name} ${formatValue(t.name, t.value)}`)
       .join('、');
+    const main = w.baseDef ?? w.baseAtk;
+    const mainCell = main == null ? '' : `${w.baseDef != null ? '防御' : '攻击'} ${main}`;
     return `<tr>
       <td class="wiki-tight">${w.icon ? `<img class="wiki-ico" src="${w.icon}" data-fallback="${w.iconUrl || ''}" alt="">` : ''}</td>
       <td class="wiki-name wiki-tight">${escapeHtml(w.name)}</td>
-      <td class="wiki-tight">${escapeHtml(w.rarity)}</td>
-      <td class="wiki-tight">${escapeHtml(w.trait)}</td>
-      <td class="wiki-tight">${fmt(w.baseAtk)}</td>
+      <td class="wiki-tight">${rankIconHtml(w.rarity) || escapeHtml(w.rarity)}</td>
+      <td class="wiki-tight">${metaIconHtml(w.trait) || escapeHtml(w.trait)}</td>
+      <td class="wiki-tight">${mainCell}</td>
       <td class="wiki-sub">${sub}</td>
       <td class="wiki-long">${w.specialEffect ? richWeb(w.specialEffect) : ''}</td>
     </tr>`;
@@ -369,8 +371,8 @@ function renderBangboos() {
     return `<tr>
       <td class="wiki-tight">${b.icon ? `<img class="wiki-ico" src="${b.icon}" data-fallback="${b.iconUrl || ''}" alt="">` : ''}</td>
       <td class="wiki-name" data-detail="${escapeHtml(b.name)}">${escapeHtml(b.name)}</td>
-      <td class="wiki-tight">${escapeHtml(b.rarity)}</td>
-      <td class="wiki-tight">${escapeHtml(b.element || '—')}</td>
+      <td class="wiki-tight">${rankIconHtml(b.rarity) || escapeHtml(b.rarity)}</td>
+      <td class="wiki-tight">${metaIconHtml(b.element) || escapeHtml(b.element || '—')}</td>
       <td class="wiki-icons">${skillsHtml}</td>
       ${statCells(b, BANG_INITIAL_STATS)}
       ${statCells(b.maxLevel, MAX_STATS)}

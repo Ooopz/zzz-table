@@ -26,7 +26,7 @@ import {
 } from '../lib/calc.js';
 import { escapeHtml, escapeJsAttr, formatValue, createSort } from '../lib/util.js';
 import { STAT } from '../game/index.js';
-import { discSetEffectsHtml, substatRollsMark } from './shared.js';
+import { discSetEffectsHtml, substatRollsMark, metaIconHtml } from './shared.js';
 import { mountCharts } from './charts.js';
 
 // 重渲染回调（拖拽排序后调用；由 render.js 注入 render()）
@@ -235,8 +235,8 @@ function unownedRowHtml(name, colOrder) {
   const cell = {};
   cell['角色'] = `<td class="tchar"><span class="t-char-cell">${img}${actions}</span></td>`;
   cell['等级'] = `<td class="tlv"><span class="ds-dim">—</span></td>`;
-  cell['职业'] = `<td class="tcls">${escapeHtml(libChar.trait || '—')}</td>`;
-  cell['属性'] = `<td class="telm">${escapeHtml(libChar.element || '—')}</td>`;
+  cell['职业'] = `<td class="tcls">${metaIconHtml(libChar.trait) || escapeHtml(libChar.trait || '—')}</td>`;
+  cell['属性'] = `<td class="telm">${metaIconHtml(libChar.element) || escapeHtml(libChar.element || '—')}</td>`;
   cell['音擎'] = `<td class="twe"><span class="ds-dim">—</span></td>`;
   cell['驱动盘'] = `<td class="tdisc"><span class="ds-dim">—</span></td>`;
   cell['缺口'] = `<td class="thit"><span class="ds-dim">—</span></td>`;
@@ -303,8 +303,8 @@ export function renderTable(ownedList, container, { unowned = [] } = {}) {
       `<td class="tchar"><span class="t-char-cell">${charIcon ? `<img class="t-ico" src="${charIcon}" loading="lazy" data-detail="${escapeHtml(charDetail)}" onclick="openNote('${escapeJsAttr(character.name)}')">` : escapeHtml(character.name)}<span class="t-actions"><button class="mini t-goal${expandedChar === character.name ? ' on' : ''}" data-detail="展开该角色的养成面板（技能/影画/觉醒 + 驱动盘重刷参考）" onclick="ZZZ.toggleGoalAcc('${escapeJsAttr(character.name)}')">养成</button><button class="mini" data-detail="配置该角色的推荐音擎/主词条/有效副词条" onclick="ZZZ.goalConfig('${escapeJsAttr(character.name)}')">配置</button></span></span></td>`;
     cell['等级'] =
       `<td class="tlv">${character.level ? `Lv.${character.level}` : '<span class="ds-dim">—</span>'}</td>`;
-    cell['职业'] = `<td class="tcls">${escapeHtml(libCharacter?.trait || '—')}</td>`;
-    cell['属性'] = `<td class="telm">${escapeHtml(libCharacter?.element || '—')}</td>`;
+    cell['职业'] = `<td class="tcls">${metaIconHtml(libCharacter?.trait) || escapeHtml(libCharacter?.trait || '—')}</td>`;
+    cell['属性'] = `<td class="telm">${metaIconHtml(libCharacter?.element) || escapeHtml(libCharacter?.element || '—')}</td>`;
 
     const wengineDetail =
       `<b>${escapeHtml(wengine.name || '未佩戴')}</b>${wengine.refinement ? ` ★${wengine.refinement}` : ''}` +
