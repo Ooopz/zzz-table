@@ -1,0 +1,244 @@
+// src/sync/workshop-stats.js —— 工坊数据聚合（2026-10 从 workshop.js 拆出）：
+// ① buildWorkshopStats（workshop.json → workshop-stats.json，单遍历聚合（当前 8 个累加器），纯逻辑在 lib/workshopAgg.js）
+// ② fetchWorkshopGrad（grad_stat 接口全服占比 → workshop-grad.json）。不 import workshop.js——workshop.js 与 CLI --mode=stats 均直接从此模块取
+import fs from 'node:fs';
+import path from 'node:path';
+import { computeAllWorkshopStats } from '../lib/workshopAgg.js';
+import { validateWorkshopStats } from '../lib/validateWorkshopStats.js';
+import { orderComboSets4First } from '../lib/plansStats.js';
+import { romanNumeralUnicode } from '../lib/util.js';
+import { resolveEntry, canonicalName, CATEGORY } from '../lib/names.js';
+import { iterWorkshopFile, readWorkshopHeader, DATA_DIR, pool, writeJsonAtomic } from '../lib/node.js';
+import { apiGet } from './workshop-api.js';
+import { loadNameIndexes, emptyNameIndexes, resolveWengineName } from './name-index.js';
+
+export const OUT_FILE = path.join(DATA_DIR, 'workshop.json'); // 聚合输入（配装条目，workshop.js 合并写出）
+const STATS_FILE = path.join(DATA_DIR, 'workshop-stats.json');
+const GRAD_FILE = path.join(DATA_DIR, 'workshop-grad.json');
+
+// 名称索引（统一 resolver，library.json 为权威源）：nick_name 差异在写时解析回 wiki 标准名，保证与 library/plans 一致。
+// ⚠️ 索引**不建在模块顶层**：server.js 用 `?v=mtime` 爆破的只有 workshop.js 的模块缓存，本模块顶层索引会冻结在
+// 首次加载，同步完 library 后新角色名解析不出来——改为每次聚合调用现读 library.json（一次解析几毫秒可忽略）。
+// library.json 缺失/损坏时降级为空索引（不归一、不崩——测试可直接 import 本模块）
+function loadIndexes() {
+  return (
+    loadNameIndexes('工坊') ?? emptyNameIndexes()
+  );
+}
+
+/** 流式遍历 workshop.json 的 entries（generator，分块 gzip 按块解压）：聚合 for...of 天然兼容，不把大数组放内存 */
+function* iterWorkshopEntries() {
+  yield* iterWorkshopFile(OUT_FILE);
+}
+
+// ---------- 汇总生成：workshop.json → workshop-stats.json ----------
+export function buildWorkshopStats(roleNameMap, weightJson, totalEntries) {
+  if (!fs.existsSync(OUT_FILE)) return null;
+  const { disc: libDiscs } = loadIndexes(); // 现读 library.json（见 loadIndexes 注释）
+  // 流式遍历（90 万+ 条全量进数组 ≈7GB 会 OOM）：聚合合并为一次遍历（此前每项各流式解析 2.13GB 一遍，每遍 ~27s）
+  // 合并后输出逐位不变（见 lib/workshopAgg.js 累加器说明）；roleStyles/roleCooccurrence 已随角色诊断删除
+  const {
+    stats,
+    discDetails, // 驱动盘单盘真实统计（含 D7 槽位 slotDist、有效强化次数 effDist）
+    panelScatter, // 面板属性对 2D 密度（暴击率×暴伤、攻击×暴伤、攻击×异常精通、攻击×暴击率，供配比散点图）
+    relicStats,
+    rankDist,
+    skillStats,
+    roleOwnership, // 角色拥有率（样本池口径）：{pool, roles}，pool=去重 uid 总数
+    skillLevelModes,
+    // weightJson 同时供 effDist 的「按角色区分有效副词条」使用，必须在聚合前传入
+  } = computeAllWorkshopStats(iterWorkshopEntries(), libDiscs, { roleNameMap, weightJson });
+  const data = {
+    meta: {
+      scrapedAt: new Date().toISOString(),
+      entries: totalEntries ?? -1,
+      poolUids: roleOwnership?.pool ?? 0,
+    },
+    ...stats,
+    discDetails,
+    panelScatter,
+    relicStats,
+    rankDist,
+    skillStats,
+    roleOwnership: roleOwnership?.roles || {},
+    skillLevelModes, // 每角色各技能等级众数（技能养成进度的目标等级）
+  };
+  // 工坊有效词条权重（system_data 的角色默认流派权重，供有效词条/评分口径复现；正常非空）
+  if (weightJson && Object.keys(weightJson).length) data.weightJson = weightJson;
+  stripReplacementChars(data);
+  // 出口自检：数学必然成立的不变量被破坏 = 聚合回归（见 validateWorkshopStats 头注释）。抛错不写盘，旧文件保留。
+  const issues = validateWorkshopStats(data);
+  if (issues.length) {
+    const sample = issues.slice(0, 8).map((s) => '  - ' + s).join('\n');
+    throw new Error(
+      `[workshop-stats 自检失败] 聚合输出违反 ${issues.length} 条不变量（未覆盖旧文件）:\n${sample}${issues.length > 8 ? `\n  … 其余 ${issues.length - 8} 条` : ''}`
+    );
+  }
+  writeJsonAtomic(STATS_FILE, data);
+  return data;
+}
+
+/** 清洗字符串里的 U+FFFD（替换字符）。
+ *  ⚠️ 历史残留：早期爬取的 workshop.json（约 373/83 万条冷门组合名）在解析 bug 时代被多字节截断固化，
+ *  U+FFFD 是合法 UTF-8，schema/字节校验都抓不到（见 CLAUDE.md「检测乱码必须直接查字面量」），只能在此统一清洗。 */
+function stripReplacementChars(v) {
+  if (typeof v === 'string') return v.replace(/�/g, '');
+  if (Array.isArray(v)) {
+    for (let i = 0; i < v.length; i++) v[i] = stripReplacementChars(v[i]);
+    return v;
+  }
+  if (v && typeof v === 'object') {
+    for (const k of Object.keys(v)) {
+      const val = stripReplacementChars(v[k]);
+      if (typeof k === 'string' && k.includes('�')) {
+        // 坏键（残缺属性名等）清洗后无法被任何标准名匹配，等效失效，不会误显示
+        delete v[k];
+        v[k.replace(/�/g, '')] = val;
+      } else {
+        v[k] = val;
+      }
+    }
+    return v;
+  }
+  return v;
+}
+
+/** 只重算 workshop-stats.json（不爬取、不重跑 grad；--mode=stats 与改聚合代码后验证用）：
+ *  读现有 workshop-grad.json 建 roleNameMap → 读 workshop-weights.json 取 weightJson →
+ *  从 workshop.json 头部读 entryCount → 流式重算（约 2-4 分钟）。放本模块（聚合侧）：不加载 workshop.js 下载侧与静态表。 */
+export function rebuildWorkshopStats() {
+  const grad = JSON.parse(fs.readFileSync(GRAD_FILE, 'utf8'));
+  const roleNameMap = new Map((grad.roles || []).map((r) => [String(r.item_id), r.name]));
+  let weightJson = null;
+  try {
+    weightJson = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'workshop-weights.json'), 'utf8')).weights || null;
+  } catch {
+    /* 缺失时聚合层退化为全部合法副词条 */
+  }
+  let entryCount = -1;
+  try {
+    const h = readWorkshopHeader(OUT_FILE);
+    if (h && h.meta && h.meta.entryCount != null) entryCount = Number(h.meta.entryCount);
+  } catch {
+    /* 读不到则 meta.entries 写 -1 */
+  }
+  return buildWorkshopStats(roleNameMap, weightJson, entryCount);
+}
+
+// ---------- 全服配装统计：每角色最常用音擎 + 驱动盘套装（workshop-grad.json） ----------
+/** 解析驱动盘 set_info（"32800_4__33100_2" → 组合名），返回 {name, sets:[{set_id,num,name}]} 或 null
+ *  libDiscs 由调用方传入（fetchWorkshopGrad 现读的索引，避免模块顶层缓存冻结）。 */
+function parseSetInfo(setInfo, artifacts, libDiscs) {
+  if (setInfo === 'other') return { name: '其他', sets: [] };
+  const parts = String(setInfo).split('__');
+  const sets = [];
+  for (const p of parts) {
+    const [setId, num] = p.split('_');
+    const a = artifacts.find((x) => x.set_id === setId);
+    // 套装名解析为 wiki 标准盘名（工坊 artifacts 名可能带尾随空格/用词差异）
+    const setName = a ? canonicalName(CATEGORY.DISC, libDiscs, a.name) || a.name : `套装${setId}`;
+    sets.push({ set_id: setId, num: Number(num), name: setName });
+  }
+  // 文本顺序统一：4 件套在前、2 件套在后（与方案侧一致），避免同名组合因顺序不同造成显示/对比差异
+  const { name, sets: orderedSets } = orderComboSets4First(sets);
+  return { name, sets: orderedSets };
+}
+
+/** 爬取全服配装统计并写入 data/workshop-grad.json；onProgress({step,done,total}) 供进度轮询，concurrency 为角色级并发（默认 6，与 workshop.js 同源） */
+export async function fetchWorkshopGrad(onProgress, concurrency = 6) {
+  const { char: libChars, wengine: libWengines, disc: libDiscs } = loadIndexes(); // 现读 library.json（见 loadIndexes 注释）
+  const sys = await apiGet('/api/v1/system_data/public', {});
+  const roles = (sys.data && sys.data.system_roles) || [];
+  const weapons = (sys.data && sys.data.system_weapons) || [];
+  const artifacts = (sys.data && sys.data.system_artifacts) || [];
+
+  const out = [];
+  const failReasons = [];
+  let done = 0;
+  let failed = 0;
+  await pool(roles, concurrency, async (role) => {
+    const { item_id, nick_name } = role;
+    try {
+      const j = await apiGet('/api/v1/role/grad_stat', { item_id, level: 40 });
+      const d = j.data || {};
+      const ws = d.weapon_stat || [];
+      const rs = d.relic_stat || [];
+
+      // 角色名解析为 wiki 标准名（维琳娜→维琳娜·艾嘉德等）；图标取解析到的标准条目
+      const roleName = canonicalName(CATEGORY.CHAR, libChars, nick_name, { fuzzy: true }) || nick_name;
+      const libChar = resolveEntry(CATEGORY.CHAR, libChars, nick_name, { fuzzy: true });
+      const roleIcon = libChar?.icon || '';
+
+      // 音擎图标：wiki 源
+      const wTotal = ws.reduce((a, x) => a + Number(x.weapon_count || 0), 0);
+      const weaponsStat = [];
+      for (const w of ws) {
+        const sysW = weapons.find((x) => String(x.item_id) === String(w.weapon_id));
+        const rawName = sysW ? sysW.nick_name : '';
+        const libW = sysW ? resolveWengineName(libWengines, rawName) : null;
+        const name =
+          w.weapon_id === 'other'
+            ? '其他'
+            : libW
+              ? libW.name
+              : rawName
+                ? romanNumeralUnicode(rawName)
+                : `音擎${w.weapon_id}`;
+        const icon = w.weapon_id === 'other' ? '' : libW?.icon || '';
+        weaponsStat.push({
+          id: w.weapon_id,
+          name,
+          icon,
+          count: Number(w.weapon_count || 0),
+          percent: wTotal ? Number(((Number(w.weapon_count || 0) / wTotal) * 100).toFixed(1)) : 0,
+        });
+      }
+
+      // 驱动盘组合：各套装 wiki 图标（套装名已由 parseSetInfo 解析为 wiki 标准名）
+      const rTotal = rs.reduce((a, x) => a + Number(x.set_info_count || 0), 0);
+      const relicsStat = [];
+      for (const r of rs) {
+        const info = parseSetInfo(r.set_info, artifacts, libDiscs);
+        const sets = [];
+        for (const s of info?.sets || []) {
+          const libD = resolveEntry(CATEGORY.DISC, libDiscs, s.name);
+          sets.push({ ...s, icon: libD?.icon || '' });
+        }
+        relicsStat.push({
+          set_info: r.set_info,
+          name: info ? info.name : r.set_info,
+          sets,
+          count: Number(r.set_info_count || 0),
+          percent: rTotal ? Number(((Number(r.set_info_count || 0) / rTotal) * 100).toFixed(1)) : 0,
+        });
+      }
+
+      out.push({ item_id, name: roleName, icon: roleIcon, weapons: weaponsStat, relics: relicsStat });
+    } catch (e) {
+      failed++;
+      if (failReasons.length < 3) failReasons.push(e.message); // 只记前几个失败原因，供最终报错定位
+      console.log(`角色 ${item_id} 失败: ${e.message}`);
+    }
+    done++;
+    onProgress?.({ step: 'grad', done, total: roles.length });
+  });
+
+  // 全量失败保护：out 为空时照写会把好数据覆盖成 {roles: []}，而 workshop-grad.json 是 role_id→角色名 的唯一映射来源，
+  // 一次限流会连累其后所有重算——宁可不写保留旧文件；条件只判 out 空，system_data 返回空角色表时同样不能写
+  if (!out.length) {
+    const hint = roles.length
+      ? `全部 ${roles.length} 个角色抓取失败（可能被风控或网络不通）；已保留现有 workshop-grad.json 不覆盖`
+      : 'system_data 未返回任何角色（接口异常）；已保留现有 workshop-grad.json 不覆盖';
+    const firstErr = failReasons[0] ? `首个错误: ${failReasons[0]}` : '无角色级错误';
+    console.error(`[工坊全服统计] ${hint}（${firstErr}）`);
+    throw new Error(`${hint}；${firstErr}`);
+  }
+  // 部分失败：仍然写入（有数据总好过没有），但把缺口显式记进 meta 并告警，避免静默减少角色数
+  if (failed) console.warn(`[工坊全服统计] ${failed}/${roles.length} 个角色失败，本次仅写入 ${out.length} 个`);
+  const data = {
+    meta: { scrapedAt: new Date().toISOString(), roles: out.length, failed, expected: roles.length },
+    roles: out,
+  };
+  writeJsonAtomic(GRAD_FILE, data);
+  return { stats: { roles: out.length, failed } };
+}

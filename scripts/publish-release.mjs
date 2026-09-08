@@ -1,0 +1,279 @@
+// scripts/publish-release.mjs —— 本地构建 GitHub Pages 部署包并发布 GitHub Release
+// （pages-from-release workflow 监听到 release 发布后自动部署到 Pages）
+// 依赖：GitHub CLI（gh）已安装并登录（gh auth login）；构建期依赖 subset-font、rollup（devDependencies）。
+// 用法：
+//   node scripts/publish-release.mjs              # 构建 release/ + 发布新版本
+//   node scripts/publish-release.mjs --no-build   # 跳过构建，只发布已存在的 release/
+//   node scripts/publish-release.mjs --no-publish # 只构建 release/（本地预览用），不发布
+// 产物：release/index.html（唯一产物——CSS/JS/数据/字体/图标/采集书签源码全内联，即 Pages 入口）
+// ⚠️ 首次使用：仓库 Settings → Pages → Source 选 "GitHub Actions"；否则 workflow 不会部署。
+import { execSync } from 'node:child_process';
+import { readFileSync, writeFileSync, mkdirSync, rmSync, cpSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { slimPlans } from '../src/lib/plansSlim.js';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const REL = join(ROOT, 'release');
+const DATA = join(ROOT, 'data');
+
+// ================= 构建 =================
+/** 生成 release/index.html（唯一产物，采集书签源码已内联）；library 保留 icon 本地路径 + iconUrl 远程链接（前端本地优先、缺图回退远程） */
+async function buildRelease() {
+  console.log('构建 GitHub Pages 部署包 → release/index.html');
+
+  // 1. 数据（plans slim 去 desc/skills，与 server /api/data 共用 src/lib/plansSlim.js）
+  const data = {
+    library: JSON.parse(readFileSync(join(DATA, 'library.json'), 'utf8')),
+    plans: slimPlans(JSON.parse(readFileSync(join(DATA, 'plans.json'), 'utf8'))),
+    workshopGrad: JSON.parse(readFileSync(join(DATA, 'workshop-grad.json'), 'utf8')),
+    workshopStats: JSON.parse(readFileSync(join(DATA, 'workshop-stats.json'), 'utf8')),
+  };
+  console.log(
+    '  数据: library',
+    Object.keys(data.library.characters || {}).length,
+    '角色 / plans',
+    Object.keys(data.plans || {}).length,
+    '角色'
+  );
+
+  // 1.5 图片压缩内联：library 的本地图片字段 → resize + base64 data URL（静态版离线可用，
+  //     不依赖 data/ 路径与远程防盗链；iconUrl 保留供非内联场景回退）。
+  //     ⚠️ dataJs 必须在本步之后生成，否则内联修改进不了产物（曾致 html 体积不变）。
+  let inlineCount = 0;
+  let inlineBytes = 0;
+  {
+    // 只组需要的 Jimp：core + png/jpeg + resize，**不用 `jimp` 桶**——桶会静态加载 plugin-print，
+    // 其 ESM 引用 simple-xml-to-json 的 .mjs（上游 1.2.7 声明了但没随包发布）→ 构建必崩（ERR_MODULE_NOT_FOUND）
+    const { createJimp } = await import('@jimp/core');
+    const { default: pngFormat } = await import('@jimp/js-png');
+    const { default: jpegFormat } = await import('@jimp/js-jpeg');
+    const { methods: resizePlugin } = await import('@jimp/plugin-resize');
+    const Jimp = createJimp({ formats: [pngFormat, jpegFormat], plugins: [resizePlugin] });
+    const IMG_DIR = join(DATA, 'img');
+    const cache = new Map();
+    const inline = async (path, maxW) => {
+      if (typeof path !== 'string') return path;
+      if (!/^\/?data\/img\/[^/]+$/.test(path)) return path; // 非本地路径（https/data: 等）不动
+      const name = path.split('/').pop();
+      if (cache.has(name)) return cache.get(name);
+      let out = path;
+      const fp = join(IMG_DIR, name);
+      if (existsSync(fp)) {
+        try {
+          const img = await Jimp.read(readFileSync(fp));
+          if (img.width > maxW) img.resize({ w: maxW, h: Math.round(img.height * (maxW / img.width)) });
+          const buf = await img.getBuffer('image/png');
+          out = 'data:image/png;base64,' + buf.toString('base64');
+          inlineCount++;
+          inlineBytes += buf.length;
+        } catch {
+          /* 单张失败保留原路径 */
+        }
+      }
+      cache.set(name, out);
+      return out;
+    };
+    const L = data.library;
+    for (const c of Object.values(L.characters || {})) {
+      c.icon = await inline(c.icon, 128);
+      // 角色立绘大图不再打包：前端（汇总表已无卡片视图）不消费 tachie/tachieUrl，连本地图与远程 URL 一并砍掉
+      delete c.tachie;
+      delete c.tachieUrl;
+    }
+    for (const w of Object.values(L.wengines || {})) w.icon = await inline(w.icon, 128);
+    for (const d of Object.values(L.discs || {})) {
+      d.icon = await inline(d.icon, 128);
+      d.roundIcon = await inline(d.roundIcon, 128);
+    }
+    for (const b of Object.values(L.bangboos || {})) b.icon = await inline(b.icon, 128);
+    // ⚠️ workshopGrad 的图**不要**内联：roles/weapons/relics 引用同一批文件，
+    //    JSON 文本里每处引用都会完整展开 data URL（曾 +29MB）；其视图已有 data-fallback 走远程。
+    console.log('  图片内联:', inlineCount, '张,', (inlineBytes / 1048576).toFixed(1), 'MB');
+  }
+  const dataJs = 'window.__STATIC_DATA__=' + JSON.stringify(data).replace(/</g, '\\u003c') + ';';
+
+  // 清空旧产物必须放在所有输入读完之后（library.json 等读失败会抛错）：此前一进来就 rmSync，
+  // 中途失败（缺数据/rollup 依赖没装）会留下空 release/，之后的 --no-build 发布也因缺 index.html 报错。
+  rmSync(REL, { recursive: true, force: true });
+  mkdirSync(REL, { recursive: true });
+
+  // 2. 字体子集化（Noto Sans SC → 仅项目出现的字符；Barlow 拉丁字重小保留原样）
+  const collectChars = () => {
+    const set = new Set();
+    for (let c = 32; c <= 126; c++) set.add(String.fromCharCode(c));
+    const roots = [join(ROOT, 'index.html'), join(ROOT, 'style.css'), join(ROOT, 'src')];
+    const walk = (p) => {
+      if (statSync(p).isDirectory()) {
+        for (const f of readdirSync(p)) if (f !== 'vendor') walk(join(p, f));
+        return;
+      }
+      if (!/\.(js|html|css)$/.test(p)) return;
+      try {
+        for (const ch of readFileSync(p, 'utf8')) set.add(ch);
+      } catch {
+        /* ignore */
+      }
+    };
+    for (const r of roots) walk(r);
+    for (const f of [
+      'library.json',
+      'plans.json',
+      'workshop-stats.json',
+      'workshop-grad.json',
+      'workshop-weights.json',
+    ]) {
+      try {
+        for (const ch of readFileSync(join(DATA, f), 'utf8')) set.add(ch);
+      } catch {
+        /* ignore */
+      }
+    }
+    return set;
+  };
+  {
+    const chars = collectChars();
+    console.log('  字体子集字符数:', [...chars].length);
+    try {
+      const subsetFont = (await import('subset-font')).default;
+      const src = readFileSync(join(ROOT, 'src/fonts/NotoSansSC-Variable.ttf'));
+      const out = await subsetFont(src, [...chars].join(''), { targetFormat: 'truetype' });
+      writeFileSync(join(REL, '_noto-subset.ttf'), out);
+      console.log('  Noto Sans SC 子集化:', src.length, '→', out.length, 'bytes');
+    } catch (e) {
+      console.warn('  ⚠️ 字体子集化失败（' + (e && e.message) + '），用原字体（更大）。');
+      cpSync(join(ROOT, 'src/fonts/NotoSansSC-Variable.ttf'), join(REL, '_noto-subset.ttf'));
+    }
+  }
+
+  // 3. rollup 打包前端 ESM → IIFE 经典脚本
+  const { rollup } = await import('rollup');
+  const bundle = await rollup({ input: join(ROOT, 'src/web/main.js') });
+  const { output } = await bundle.generate({ format: 'iife' });
+  let appJs = output[0].code;
+  await bundle.close();
+
+  // 4. 技能图标 base64 内联（JS 里硬编码 '/src/img/xxx.png' → data URL）
+  {
+    const ICONS = [
+      'normal',
+      'dodge',
+      'support',
+      'special',
+      'ultimate',
+      'passive',
+      'bangboo-active',
+      'bangboo-passive',
+      'bangboo-chain',
+    ];
+    for (const name of ICONS) {
+      const p = join(ROOT, 'src/img', name + '.png');
+      if (!existsSync(p)) continue;
+      const b64 = readFileSync(p).toString('base64');
+      appJs = appJs.split(`'/src/img/${name}.png'`).join(`'data:image/png;base64,${b64}'`);
+    }
+  }
+
+  // 5. 组装 index.html
+  let html = readFileSync(join(ROOT, 'index.html'), 'utf8');
+  const css = readFileSync(join(ROOT, 'style.css'), 'utf8');
+  // 采集书签源码 → 内联进页面（window.__COLLECT_JS__）：数据导入弹窗据此生成**自包含书签**——
+  //   点书签即在米游社页执行完整采集逻辑，不依赖外部 collect.js 能被跨域注入（曾致点书签毫无反应）。
+  const collectSrc = readFileSync(join(ROOT, 'src/web/collect.js'), 'utf8');
+  const FONTS = ['BarlowCondensed-SemiBold.ttf', 'BarlowCondensed-Bold.ttf', 'BarlowCondensed-Black.ttf'];
+  const fontB64 = {};
+  for (const f of FONTS) fontB64[f] = readFileSync(join(ROOT, 'src/fonts', f)).toString('base64');
+  fontB64['NotoSansSC-Variable.ttf'] = readFileSync(join(REL, '_noto-subset.ttf')).toString('base64');
+  const cssInline = css.replace(
+    /url\('src\/fonts\/([^']+)'\)/g,
+    (m, f) => `url('data:font/ttf;base64,${fontB64[f] || ''}')`
+  );
+  const escScript = (code) => code.replace(/<\/script/gi, '<\\/script');
+  const vendor = (f) => escScript(readFileSync(join(ROOT, 'src/vendor', f), 'utf8'));
+  const faviconB64 = readFileSync(join(ROOT, 'src/img/logo.webp')).toString('base64');
+  const collectLiteral = JSON.stringify(collectSrc).replace(/<\/script/gi, '<\\/script'); // 与 escScript 同款：防 `</script` 提前闭合 <script> 块
+  html = html
+    .replace(
+      /<link rel="icon"[^>]*>/,
+      `<link rel="icon" type="image/webp" href="data:image/webp;base64,${faviconB64}" />`
+    )
+    // header 左上角 logo（同一文件）也内联：相对路径在 Pages 域名下会 404
+    .replace(/src="src\/img\/logo\.webp"/, `src="data:image/webp;base64,${faviconB64}"`)
+    .replace(/<link rel="stylesheet"[^>]*>/, `<style>\n${cssInline}\n</style>`)
+    .replace(
+      /<script src="\/src\/vendor\/echarts\.min\.js"><\/script>/,
+      `<script>\n${vendor('echarts.min.js')}\n</script>`
+    )
+    .replace(
+      /<script src="\/src\/vendor\/echarts-gl\.min\.js"><\/script>/,
+      `<script>\n${vendor('echarts-gl.min.js')}\n</script>`
+    )
+    .replace('</head>', `  <script>window.__STATIC__ = true;\n${dataJs}</script>\n  </head>`)
+    .replace('</head>', `  <script>window.__COLLECT_JS__=${collectLiteral};</script>\n  </head>`)
+    .replace(/<script type="module" src="\/src\/web\/main\.js"><\/script>/, `<script>\n${escScript(appJs)}\n</script>`);
+  writeFileSync(join(REL, 'index.html'), html);
+  rmSync(join(REL, '_noto-subset.ttf'), { force: true });
+
+  // 6. 体积统计（不再产出独立 collect.js / README：采集书签已内联进 index.html，单文件即全部产物）
+  const size = statSync(join(REL, 'index.html')).size;
+  console.log('\n构建完成！');
+  console.log('  release/index.html:', (size / 1048576).toFixed(1), 'MB');
+}
+
+// ================= 发布 =================
+async function main() {
+  if (!process.argv.includes('--no-build')) {
+    console.log('① 构建 release/ …');
+    await buildRelease();
+  } else {
+    console.log('① 跳过构建（--no-build）');
+  }
+
+  if (!existsSync(join(REL, 'index.html'))) {
+    console.error('缺少 release/index.html，请先构建（去掉 --no-build 或先跑一次完整命令）');
+    process.exit(1);
+  }
+
+  if (process.argv.includes('--no-publish')) {
+    console.log('\n② 跳过发布（--no-publish）。release/ 已生成，可直接用本地 http 服务预览：cd release && npx serve');
+    return;
+  }
+
+  // ② 打版本号：日期标签；同一天重复发布则加序号
+  // ⚠️ execSync 用 stdio:'inherit'（不用 'pipe'）：受限环境（沙箱/CI 管道）下 pipe 捕获子进程输出会失败，
+  //    导致 gh release view 永远"检测失败"而误判 tag 不存在（曾致同日重复发布时 create 撞已有 tag）。
+  // 版本日期用**本地时区**（曾用 toISOString() 取 UTC 日期：东八区 21 号凌晨时 UTC 仍是 20 号，版本号滞后一天）
+  const now = new Date();
+  const date = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+  ].join('');
+  let tag = 'v' + date;
+  try {
+    execSync('gh release view ' + tag + ' --json tagName', { stdio: 'inherit' });
+    let i = 2;
+    while (true) {
+      tag = 'v' + date + '-' + i;
+      try {
+        execSync('gh release view ' + tag + ' --json tagName', { stdio: 'inherit' });
+        i++;
+      } catch {
+        break;
+      }
+    }
+  } catch {
+    /* 该 tag 不存在，直接用 */
+  }
+
+  console.log('② 发布 Release ' + tag + ' …');
+  execSync(`gh release create ${tag} "${join(REL, 'index.html')}" ` + `--title "配装面板 ${tag}" --notes "${tag}"`, {
+    cwd: ROOT,
+    stdio: 'inherit',
+  });
+
+  console.log('\n完成！Release ' + tag + ' 已发布，等待 Actions 自动部署到 Pages。');
+  console.log('页面地址：https://<用户名>.github.io/<仓库名>/');
+  console.log('采集书签：打开部署后的页面 →「同步数据 → 数据导入」→ 拖自包含书签（已内联，无需额外文件）。');
+}
+await main();

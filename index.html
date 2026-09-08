@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>绝区零 · 配装面板</title>
+    <link rel="icon" type="image/webp" href="src/img/logo.webp" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <div class="head-row">
+        <div class="head-brand">
+          <img class="logo" src="src/img/logo.webp" alt="绝区零配装面板 logo" />
+          <div class="titles">
+            <h1>ZZZ <em>配装面板</em></h1>
+            <span class="sub">New Eridu · Drive Disc Terminal</span>
+          </div>
+        </div>
+        <div class="spacer"></div>
+        <nav class="seg" role="group" aria-label="视图切换">
+          <button class="view-tab on" data-view="mychars"><span class="num">01</span>我的角色</button>
+          <button class="view-tab" data-view="discs"><span class="num">02</span>驱动盘</button>
+          <button class="view-tab" data-view="simulate"><span class="num">03</span>模拟</button>
+          <button class="view-tab" data-view="wiki"><span class="num">04</span>资料</button>
+        </nav>
+        <div class="head-actions">
+          <button id="syncBtn" class="primary">同步数据</button>
+          <button id="helpBtn" class="ghost">使用说明</button>
+        </div>
+      </div>
+    </header>
+
+    <div id="status"></div>
+
+    <main id="grid"></main>
+
+    <div class="modal" id="helpModal">
+      <div class="modal-box">
+        <div class="modal-scroll">
+          <button class="close" id="helpClose" aria-label="关闭">✕</button>
+          <h2>使用说明</h2>
+          <p>
+            <b>如何获取 Cookie（同步「我的角色 / 推荐方案」需要）：</b><br />
+            ① 用浏览器打开 <code>mihoyo.com</code>（米游社官网）并登录你的账号；<br />
+            ② 按 <code>F12</code> 打开开发者工具 → 切到「网络（Network）」标签 → 刷新页面，点任意一个请求，
+            在「请求头（Headers）」里找到 <code>cookie</code> 字段，整段复制（很长，全部复制）；<br />
+            ③ 打开 header 的「同步数据」弹窗，把 Cookie 粘贴到输入框 → 点「保存 cookie」→ 勾选 「更新我的角色 /
+            更新推荐方案」→ 点「更新」。<br />
+            （也可用弹窗里的「米游社 Cookie 书签」一键复制，只需拖一次；Cookie 缓存在本地
+            <code>data/.cookie.json</code>，不回显，需更换时直接覆盖粘贴。）
+          </p>
+          <p>
+            <b>同步数据：</b>「同步数据」弹窗可勾选四项——<b>更新数据库</b>（角色/音擎/驱动盘/邦布基础数据，无需登录）、
+            <b>更新我的角色</b>（你的账号真实角色，需 Cookie）、<b>更新推荐方案</b>（米游社养成指南，需 Cookie）、
+            <b>更新工坊数据</b>（全服玩家配装，全量爬取耗时数小时，慎勾）。可多选，一次更新。数据有缺失时
+            对应页面会红字提示需要同步哪一项。
+          </p>
+          <p>
+            <b>我的角色（01）：</b>账号角色一览汇总表（每行一个角色，行列可拖拽排序，无卡片视图）。
+            角色列旁两个按钮：<b>「养成」</b>在行内就地展开练度面板；<b>「配置」</b>打开「养成配置」弹窗
+            （推荐音擎 / 4/5/6 号位主词条 / 有效副词条勾选，也可从推荐方案一键「应用」）。属性列各含
+            「目标 N」子行与圆形达成率，另有 缺口 与 穿透值/贯穿力/属性伤害（标元素）列。
+          </p>
+          <p>
+            <b>练度面板（「养成」手风琴，从上到下）：</b><br />
+            · <b>角色详情条带</b>：技能养成（技能图标 + 当前 Lv / 玩家样本该技能众数目标 + 下方等级分布图，
+            达标金色）+ 影画 / 潜能觉醒；<br />
+            · <b>配装对标</b>：音擎与套装组合的 我的 / 养成指南推荐 / 工坊真实玩家 三方对照；<br />
+            · <b>驱动盘提升</b>：六件盘简卡，各盘「命中 N」与重刷概率四口径（重刷提升概率 / 持平概率 / 保词条提升概率 /
+            初始4/3词条提升概率），最值得重刷的盘金框盖章「先刷」；标题可一键跳转「模拟 → 驱动盘提升模拟」精算；<br />
+            · <b>面板分布</b>：每属性一行，X 轴 = 玩家分位（0-100%，上下行横向可比）。青瓷密度 = 玩家真实分布，
+            浅金带 = 推荐区间（中档中位 ~ 高档上限），<b>金色点 = 我的分位</b>，<b>紫色三角 = 已设目标分位</b>；<br />
+            · <b>配比散点</b>：两幅 2D 玩家配比密度散点，下拉切换属性对，金色菱形 = 我的位置。
+          </p>
+          <p>
+            <b>目标与缺口：</b>目标数值在属性列「目标 N」子行<b>点击修改</b>（暴击率填 60 即 60%；留空保存 =
+            清除）。设了目标后，它的玩家分位<b>不显示在表格</b>，而是以面板分布图里的<b>紫色三角</b>呈现。「缺口」列
+            直接显示毕业状态——<b>已毕业 ✓</b> / <b>缺口 N</b>（附逐属性「差 N 条」明细，靠副词条无法补足的标
+            「不可补」）/ <b>未设目标</b>。命中与缺口口径由「养成配置」勾选的<b>有效副词条</b>决定（攻击/生命/防御
+            只有百分比变体计入命中，固定值不参与）。
+          </p>
+          <p>
+            <b>驱动盘（02）：</b>清盘决策工具，<b>纯知识、不接个人盘</b>。上半「全套装清理速查」：30 套按判定倾向
+            分色徽章（泛用4件套 / 角色专属套 / 仅2件套可用 / 未来套 / 冷门），行含套装图标与 4件套适配角色、
+            2件套散件实况；点击某套装 → 下半显示该套的清理决策卡：适配职业、4件套适配角色（官方 wiki 推荐 ×
+            工坊实况）、逐槽主词条三级判定（保留 / 视词条 / 分解）、有效副词条清单与主词条×副词条协同证据图。
+            判定倾向与逐项判定均可<b>点击修正</b>（覆盖持久化，金色圆点 = 已手工调整，可逐项/全部重置回自动）。
+          </p>
+          <p>
+            <b>模拟（03）：</b>两个 tab——<b>驱动盘提升模拟</b>（可调权重 / 定向道具后精算「新盘超过当前盘」的提升
+            概率，含持平 / 保词条 / 初始4/3词条口径）；<b>成长极限模拟</b>（副词条强化次数分配到 X/Y（或 X/Y/Z）
+            轴的帕累托有效前沿，2D/3D）。
+          </p>
+          <p>
+            <b>资料（04）：</b>角色 / 音擎 / 驱动盘 / 邦布 四库 + 总览 五个子面板。角色行技能图标可<b>点击</b>弹出
+            「技能数值」弹窗（该技能每级伤害倍率等）。「总览」基于工坊<b>高练度玩家样本</b>（排行榜上榜玩家，
+            比全服平均更强，不是全服分布），展示 装配评分分布 / 影画档位金字塔 / 角色拥有率——需先同步「工坊数据」。
+          </p>
+          <p>
+            <b>副词条成长与命中：</b>「有效副词条」勾选决定哪些属性算命中；驱动盘词条旁标注 <b>×n</b>（该词条强化
+            次数，按成长规则由词条数值推算），命中次数 = 六个盘落在有效副词条上的词条次数之和（每个词条本身算 1，
+            每强化一次再 +1）。
+          </p>
+          <p>
+            <b>最终面板数值：</b>优先显示账号接口返回的真实值（和游戏内一致）；「计算明细」是用属性库基础值 +
+            装备推算的， 4 件套条件效果等未计入，可能与实际略有出入。
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="syncModal">
+      <div class="modal-box modal-wide">
+        <div class="modal-scroll">
+          <button class="close" id="syncClose" aria-label="关闭">✕</button>
+          <h2>数据同步</h2>
+          <p style="color: var(--dim); font-size: var(--fs-sm)">勾选要更新的数据，点「更新」开始；可多选。</p>
+          <div id="syncFreshness" class="sync-fresh"></div>
+          <div class="sync-opts">
+            <label><input type="checkbox" class="sync-chk" data-key="characters" checked /> 更新我的角色</label>
+            <label><input type="checkbox" class="sync-chk" data-key="wiki" /> 更新数据库</label>
+            <label><input type="checkbox" class="sync-chk" data-key="plans" /> 更新推荐方案</label>
+            <label class="sync-ws"
+              ><span class="sync-ws-title"
+                ><input type="checkbox" class="sync-chk" data-key="workshop" /> 更新工坊数据</span
+              ><span class="sync-ws-note">（全量爬取，耗时数小时，慎勾）</span></label
+            >
+          </div>
+          <div class="row">
+            <button id="syncRun" class="primary">更新</button>
+          </div>
+          <div id="syncProgress" class="sync-progress"></div>
+          <div id="syncErrors" class="sync-errors"></div>
+          <h3 style="margin-top: 14px">获取cookie</h3>
+          <p style="color: var(--dim); font-size: var(--fs-sm)">
+            ① 打开
+            <a
+              href="https://act.mihoyo.com/zzz/event/character-builder/index.html?game_biz=nap_cn&mhy_auth_required=1"
+              target="_blank"
+              rel="noopener"
+              >米游社养成指南</a
+            >
+            （需已登录，页面含 <code>e_nap_token</code> 登录态）。<br />
+            ② 把下面的
+            <a id="syncBookmarklet" href="#" data-detail="拖到浏览器书签栏，以后一键收集">米游社 Cookie 书签</a>
+            <b>拖到书签栏</b>（只需一次）。<br />
+            ③ 之后在养成指南页<b>点一下书签</b>，自动把关键 cookie 复制到剪贴板；回本页粘贴到下方文本框保存。<br />
+            「更新我的角色」与「更新推荐方案」需要；<code>e_nap_token</code> 有效期较短，过期需重新导出。
+          </p>
+          <pre id="syncCookieSnippet" class="snippet"></pre>
+          <div class="row">
+            <button id="syncCopy" class="ghost">复制脚本</button>
+            <span style="font-size: var(--fs-xs); color: var(--dim)"
+              >（备选：F12 → 控制台粘贴运行，效果与书签相同）</span
+            >
+          </div>
+          <div id="syncCookieState" class="sync-cookie-state"></div>
+          <textarea
+            id="syncCookieInput"
+            rows="3"
+            placeholder="粘贴 cookie（已缓存的 cookie 不回显，需更换时直接覆盖粘贴）"
+          ></textarea>
+          <div class="row">
+            <button id="syncCookieSave" class="primary">保存 cookie</button>
+          </div>
+          <p style="font-size: var(--fs-sm); color: var(--dim)">
+            cookie 只保存到本地服务器的 <code>data/.cookie.json</code>，不会发送给任何外部服务器。
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- GitHub Pages 静态版：我的角色数据导入（无后端，角色数据缓存在浏览器 localStorage） -->
+    <div class="modal" id="importModal">
+      <div class="modal-box modal-wide">
+        <div class="modal-scroll">
+          <button class="close" id="importClose" aria-label="关闭">✕</button>
+          <h2>我的角色 · 数据导入</h2>
+          <p style="font-size: var(--fs-sm); color: var(--dim)">
+            静态版没有后端服务器，浏览器无法直连米游社接口（CORS
+            拦截），且<b>手机端无法运行采集脚本</b>（书签/控制台仅电脑可用）。
+            请在<b>电脑</b>上用采集书签抓取（会自动下载
+            <code>zzz-chars.json</code>），把文件传到手机（微信文件助手等），再点下方「选择 JSON 文件」导入——
+            数据只保存在<b>本浏览器 localStorage</b>，不会上传。
+          </p>
+          <p style="font-size: var(--fs-sm)">
+            <b>① 电脑上安装采集书签（只需一次）：</b>把下面链接<b>拖到书签栏</b>（部分浏览器不支持拖拽，可<b
+              >右键链接 → 添加到书签栏</b
+            >）：<br />
+            <a id="importBookmarklet" href="#" data-detail="拖到浏览器书签栏，以后一键采集">采集我的角色</a><br />
+            <span style="color: var(--dim); font-size: var(--fs-sm)"
+              >（书签内容是注入本站 <code>collect.js</code> 的小脚本，很短）</span
+            >
+          </p>
+          <p style="font-size: var(--fs-sm)">
+            <b>② 电脑上采集：</b>打开
+            <a href="https://user.mihoyo.com/" target="_blank" rel="noopener">user.mihoyo.com</a
+            >（米游社网页版，需已登录），点书签「采集我的角色」→ 脚本自动抓取你的全部角色，<b
+              >复制到剪贴板并下载 <code>zzz-chars.json</code></b
+            >（弹出确认框）。
+          </p>
+          <p style="font-size: var(--fs-sm)">
+            <b>③ 导入（电脑粘贴 / 手机选文件）：</b>电脑直接粘贴到下方文本框；手机把
+            <code>zzz-chars.json</code> 传到本机后点下方「选择 JSON 文件」。最后点「导入」。
+          </p>
+          <textarea
+            id="importInput"
+            rows="8"
+            placeholder="电脑：粘贴采集脚本复制的角色数据…（手机用下方文件导入）"
+            style="width: 100%; box-sizing: border-box"
+          ></textarea>
+          <div style="display: flex; gap: 10px; margin-top: 12px; align-items: center; flex-wrap: wrap">
+            <button id="importSave" class="primary">导入</button>
+            <button id="importClear" class="ghost">清空我的角色</button>
+            <label
+              class="ghost"
+              style="
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                padding: 5px 12px;
+                border: 1px solid var(--line2);
+                color: var(--dim);
+                font-weight: 700;
+                font-size: var(--fs-sm);
+              "
+            >
+              选择 JSON 文件<input type="file" id="importFile" accept=".json,application/json" class="visually-hidden" />
+            </label>
+            <span id="importState" style="color: var(--dim); font-size: var(--fs-sm)"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="targetModal">
+      <div class="modal-box modal-wide">
+        <div class="modal-scroll">
+          <button class="close" id="targetClose" aria-label="关闭">✕</button>
+          <h2>养成配置 · <span id="targetChar" style="color: var(--acc)"></span></h2>
+          <p style="color: var(--dim); font-size: var(--fs-sm)">
+            目标属性数值请在汇总表属性列「目标 N」子行点击修改。此处勾选<b>有效副词条</b>，配置推荐音擎与 4/5/6
+            号位主词条（或从下方推荐方案「应用」一键填入）。
+          </p>
+          <div class="eff-block">
+            <h3 style="margin-top: 6px">有效副词条</h3>
+            <div id="effGrid" class="tgrid"></div>
+          </div>
+          <div class="tgrid">
+            <div class="titem">
+              <label>推荐音擎</label>
+              <select id="targetWengine" data-detail="只可选属性库中的音擎">
+                <option value="">—</option>
+              </select>
+            </div>
+            <div class="titem">
+              <label>4号位主词条</label>
+              <select id="targetMain4">
+                <option value="">—</option>
+              </select>
+            </div>
+            <div class="titem">
+              <label>5号位主词条</label>
+              <select id="targetMain5">
+                <option value="">—</option>
+              </select>
+            </div>
+            <div class="titem">
+              <label>6号位主词条</label>
+              <select id="targetMain6">
+                <option value="">—</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <button id="targetSave" class="primary">保存</button>
+            <button id="targetClear" class="ghost">清空</button>
+          </div>
+          <div>
+            <h3 style="margin-top: 18px">推荐方案（养成指南）· 属性列为推荐最大值</h3>
+            <div id="planTable"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="noteModal">
+      <div class="modal-box">
+        <div class="modal-scroll">
+          <button class="close" id="noteClose" aria-label="关闭">✕</button>
+          <h2>角色备注 · <span id="noteChar" style="color: var(--acc)"></span></h2>
+          <textarea
+            id="noteInput"
+            rows="4"
+            style="min-height: 80px"
+            placeholder="为这个角色添加备注…（留空可清除）"
+          ></textarea>
+          <div class="row">
+            <button id="noteSave" class="primary">保存</button>
+            <button id="noteClear" class="ghost">清空</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="goalEditModal">
+      <div class="modal-box">
+        <div class="modal-scroll">
+          <button class="close" id="goalEditClose" aria-label="关闭">✕</button>
+          <h2>目标数值 · <span id="goalEditAttrName" style="color: var(--acc)"></span></h2>
+          <p class="ds-dim">填面板显示口径的数值（暴击率 60 表示 60%，攻击力直接填数字）。留空保存 = 清除该目标。</p>
+          <input id="goalEditInput" type="number" step="any" min="0" placeholder="目标数值…" />
+          <div class="row">
+            <button id="goalEditSave" class="primary">保存</button>
+            <button id="goalEditClear" class="ghost">清除</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="skillModal">
+      <div class="modal-box modal-wide">
+        <div class="modal-scroll">
+          <button class="close" id="skillClose" aria-label="关闭">✕</button>
+          <h2>技能数值 · <span id="skillTitle" style="color: var(--acc)"></span></h2>
+          <div id="skillBody"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 数据由 main.js 经 /api/data 注入 -->
+
+    <script src="/src/vendor/echarts.min.js"></script>
+    <script src="/src/vendor/echarts-gl.min.js"></script>
+    <script type="module" src="/src/web/main.js"></script>
+  </body>
+</html>
