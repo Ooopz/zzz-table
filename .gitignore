@@ -1,0 +1,20 @@
+node_modules/
+.npm-cache
+release/
+# 仅放行 Pages CI 构建所需的公开数据 JSON（其余 data/ 含 cookie/用户配置/超大原始文件，一律忽略）
+data/*
+!data/library.json
+!data/plans.json
+!data/workshop-stats.json
+!data/workshop-grad.json
+!data/workshop-weights.json
+.claude/
+.agents
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+.gitignore
+skills-lock.json
+CLAUDE.md

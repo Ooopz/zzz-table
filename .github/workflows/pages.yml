@@ -1,0 +1,35 @@
+# GitHub Pages 自动部署：push 到 master → CI 构建单文件 release/index.html → 发布到 Pages
+# 前置（一次性，需在仓库 Settings 里做）：Settings → Pages → Source 选 "GitHub Actions"，
+# 否则 deploy-pages 步骤会失败。数据由仓库内 data/*.json 提供（见 .gitignore 放行清单）。
+name: pages
+on:
+  push:
+    branches: [master]
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  build-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # 只构建 release/index.html（--no-publish 跳过 gh release 发布，纯 Pages 用）
+      - run: node scripts/publish-release.mjs --no-publish
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: release
+      - id: deployment
+        uses: actions/deploy-pages@v4
