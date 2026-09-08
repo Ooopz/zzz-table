@@ -1,36 +1,10 @@
-// src/lib/names.js —— 统一名称解析：跨数据源（library/wiki、账号、养成指南、工坊）名称变体 → 标准名
-// library.json 为权威源；集中「类别归一化键 + 手工别名表」，同步写时固化、消费端解析都走这里。
+// src/lib/names.js —— 名称解析算法（通用：跨源变体名 → 标准名）。
+// 实体词表(CATEGORY / 别名 / 归一化键策略)已迁至 src/game/entityNames.js（names 的**非函数**部分）；
+// 本模块只保留解析/查找逻辑，数据从 game 取；为兼容旧 import 仍 re-export CATEGORY/别名（权威在 game）。
 // 双端共用，禁止 import 任何 node: 模块。
-import { normalize, normalizeRomanKey } from './util.js';
-
-export const CATEGORY = { CHAR: 'char', WENGINE: 'wengine', DISC: 'disc', BANGBOO: 'bangboo' };
-
-/** 归一化键：char/disc/bangboo 用 normalize；wengine 必须用 normalizeRomanKey —— normalize 会剥光罗马数字，使 残响-Ⅰ/Ⅱ/Ⅲ 系列键碰撞 */
-const CATEGORY_KEY = {
-  [CATEGORY.CHAR]: normalize,
-  [CATEGORY.WENGINE]: normalizeRomanKey,
-  [CATEGORY.DISC]: normalize,
-  [CATEGORY.BANGBOO]: normalize,
-};
-
-/** 手工别名表（变体 → 规范名；规范名须存在于 library 键，否则 buildNameIndex 会跳过该条） */
-const ALIASES = {
-  [CATEGORY.CHAR]: {
-    亚历山德丽娜·莎芭丝提安: '亚历山德丽娜·莎芭丝缇安', // 工坊「提」vs wiki「缇」（原 panelBench.CHAR_ALIASES）
-    维琳娜: '维琳娜·艾嘉德', // 工坊 grad 短名
-    '11号': '「11号」', // 工坊 grad 缺书名号（normalize 也能命中，显式别名表意）
-    星徽·比利: '星徽·比利·奇德', // 歧义关键：比利·奇德 是两者子串，显式别名抢占
-  },
-  [CATEGORY.WENGINE]: {},
-  [CATEGORY.DISC]: {
-    棘刺玫瑰: '荆棘玫瑰', // wiki 页面名（2026-10 起为「荆棘玫瑰」）；旧名兼容历史数据（plans/workshop 写时固化的旧标准名）
-  },
-  [CATEGORY.BANGBOO]: {},
-};
-
-/** 类别别名表便捷引用（CHAR_ALIASES 供 web/wsRoles.js 使用；DISC_ALIASES 仅测试使用） */
-export const CHAR_ALIASES = ALIASES[CATEGORY.CHAR];
-export const DISC_ALIASES = ALIASES[CATEGORY.DISC];
+import { normalize } from './util.js';
+import { CATEGORY, CATEGORY_KEY, ALIASES, CHAR_ALIASES, DISC_ALIASES } from '../game/entityNames.js';
+export { CATEGORY, CHAR_ALIASES, DISC_ALIASES };
 
 /**
  * 构建名称索引。
