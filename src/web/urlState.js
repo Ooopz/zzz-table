@@ -38,7 +38,7 @@ function migrateLegacyStats(p) {
     return;
   }
   // detail / 无 tab / 未知 tab → 「我的角色」汇总（旧统计默认 tab 即 detail；无二级 tab）
-  p.set('view', VIEWS.MY_CHARS);
+  p.set('view', VIEWS.ROLES);
   p.delete('tab');
 }
 
@@ -65,14 +65,14 @@ export function migrateViewState() {
  *  view 缺省时沿用 URL 已有 view（子 tab 切换场景），否则回退 userConfig.view——避免把 loadUserConfig 之前的默认 mychars 写进 URL。 */
 export function syncUrl(view) {
   if (!view) {
-    const raw = new URLSearchParams(location.search).get('view') || userConfig.view || VIEWS.MY_CHARS;
-    view = VIEW_VALUES.has(raw) ? raw : VIEWS.MY_CHARS;
+    const raw = new URLSearchParams(location.search).get('view') || userConfig.view || VIEWS.ROLES;
+    view = VIEW_VALUES.has(raw) ? raw : VIEWS.ROLES;
   }
   const p = new URLSearchParams();
-  if (view !== VIEWS.MY_CHARS) p.set('view', view);
+  if (view !== VIEWS.ROLES) p.set('view', view);
   const tab = currentTab(view);
   if (tab) p.set('tab', tab);
-  if (view === VIEWS.MY_CHARS && expandedChar) p.set('role', expandedChar);
+  if (view === VIEWS.ROLES && expandedChar) p.set('role', expandedChar);
   if (view === VIEWS.SIMULATE && simTab === 'prob' && dpRole) p.set('role', dpRole);
   if (view === VIEWS.DISC && selectedDisc) p.set('disc', selectedDisc);
   const qs = p.toString();
@@ -82,14 +82,14 @@ export function syncUrl(view) {
 /** 首次渲染前从 URL 恢复 子tab/角色/盘 状态（一级 view 由 render.js 的 resolveView 解析）。 */
 export function applyUrlState() {
   const p = new URLSearchParams(location.search);
-  const raw = p.get('view') || userConfig.view || VIEWS.MY_CHARS;
-  const view = VIEW_VALUES.has(raw) ? raw : VIEWS.MY_CHARS;
+  const raw = p.get('view') || userConfig.view || VIEWS.ROLES;
+  const view = VIEW_VALUES.has(raw) ? raw : VIEWS.ROLES;
   const tab = p.get('tab');
   if (tab && (URL_TABS[view] || []).includes(tab)) {
     if (view === VIEWS.WIKI) setWikiTab(tab);
     else if (view === VIEWS.SIMULATE) setSimTab(tab);
   }
-  if (view === VIEWS.MY_CHARS) {
+  if (view === VIEWS.ROLES) {
     // 我的角色已无二级 tab：role 恒为手风琴展开角色
     const role = p.get('role');
     if (role) setExpandedChar(role);

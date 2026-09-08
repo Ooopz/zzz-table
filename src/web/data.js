@@ -139,7 +139,8 @@ export let userConfig = {
   notes: {},
   rowOrder: [],
   colOrder: [],
-  view: 'mychars',
+  view: 'roles',
+  showAll: true, // 「角色」视图默认全显（含未拥有灰行）；false = 只看已拥有
   discWeights: {},
   discCleanOverrides: {},
 };
@@ -246,7 +247,8 @@ export async function loadUserConfig() {
           notes: {},
           rowOrder: [],
           colOrder: [],
-          view: 'mychars',
+          view: 'roles',
+          showAll: true,
           discWeights: {},
           discCleanOverrides: {},
         },
@@ -267,7 +269,7 @@ export async function loadUserConfig() {
         notes: {},
         rowOrder: [],
         colOrder: [],
-        view: 'mychars',
+        view: 'roles',
         discWeights: {},
         discCleanOverrides: {},
       },

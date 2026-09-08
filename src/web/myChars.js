@@ -2,6 +2,7 @@
 // 拖拽后重渲染经 setMyCharsRerender 注入 render()（避免反向依赖 render.js 成环）
 import {
   grid,
+  library,
   discIndex,
   statEntries,
   readNote,
@@ -214,7 +215,42 @@ function cellStats(R, target, s, tInfo, name) {
   return `<td class="tstat"${tip}>${row(ringHtml)}${sub}</td>`;
 }
 
-export function renderTable(list, container) {
+/** 未拥有角色灰行：库基础（图标/职业/属性）照常，个人数值/装备一律 —；不回退 wiki 推算。
+ *  带「养成」（展开全服/推荐参考手风琴）与禁用的「配置」按钮；整行不可拖、不参与排序/行序。 */
+function unownedRowHtml(name, colOrder) {
+  const libChar = library.characters?.[name] || {};
+  const icon = libChar.icon || '';
+  const meta = [libChar.rarity, libChar.element, libChar.trait, libChar.faction]
+    .filter(Boolean)
+    .map((s) => escapeHtml(s))
+    .join(' · ');
+  const tip = `<b>${escapeHtml(name)}</b><br>${meta}<br><span style="color:var(--dim)">未拥有该角色，仅全服/推荐参考</span>`;
+  const img = icon
+    ? `<img class="t-ico" src="${escapeHtml(icon)}" loading="lazy" data-detail="${escapeHtml(tip)}">`
+    : escapeHtml(name);
+  const isOpen = expandedChar === name;
+  const actions = `<span class="t-actions">
+    <button class="mini t-goal${isOpen ? ' on' : ''}" data-detail="查看该角色的全服/推荐参考（未拥有，无个人练度）" onclick="ZZZ.toggleGoalAcc('${escapeJsAttr(name)}')">养成</button>
+    <button class="mini" disabled data-detail="未拥有该角色，无法配置个人目标">配置</button>
+  </span>`;
+  const cell = {};
+  cell['角色'] = `<td class="tchar"><span class="t-char-cell">${img}${actions}</span></td>`;
+  cell['等级'] = `<td class="tlv"><span class="ds-dim">—</span></td>`;
+  cell['职业'] = `<td class="tcls">${escapeHtml(libChar.trait || '—')}</td>`;
+  cell['属性'] = `<td class="telm">${escapeHtml(libChar.element || '—')}</td>`;
+  cell['音擎'] = `<td class="twe"><span class="ds-dim">—</span></td>`;
+  cell['驱动盘'] = `<td class="tdisc"><span class="ds-dim">—</span></td>`;
+  cell['缺口'] = `<td class="thit"><span class="ds-dim">—</span></td>`;
+  for (const s of targetStats)
+    cell[s] = `<td class="tstat"><span class="ds-dim">—</span><div class="tbar tbar-empty"></div></td>`;
+  const cells = colOrder.map((c) => cell[c]).join('');
+  const acc = isOpen
+    ? `<tr class="goal-acc-row"><td colspan="${colOrder.length}"><div class="goal-acc-body">${renderGoalAccordionHtml(name)}</div></td></tr>`
+    : '';
+  return `<tr class="row-unowned" data-char="${escapeHtml(name)}" data-unowned="1">${cells}</tr>${acc}`;
+}
+
+export function renderTable(ownedList, container, { unowned = [] } = {}) {
   const allColumns = ['角色', '等级', '职业', '属性', '音擎', '驱动盘', '缺口', ...targetStats];
   // 列序：优先用保存的顺序（过滤掉已不存在的列），新列补到末尾
   let colOrder = (readColOrder() || []).filter((c) => allColumns.includes(c));
@@ -223,12 +259,12 @@ export function renderTable(list, container) {
   // 行序：优先用保存的（新角色排末尾）
   const savedRowOrder = readRowOrder() || [];
   const rowOrder = savedRowOrder.length
-    ? [...list].sort((a, b) => {
+    ? [...ownedList].sort((a, b) => {
         const ia = savedRowOrder.indexOf(a.name),
           ib = savedRowOrder.indexOf(b.name);
         return (ia < 0 ? 9999 : ia) - (ib < 0 ? 9999 : ib);
       })
-    : list;
+    : ownedList;
 
   const SORTABLE_COLS = new Set(['角色', '等级', '职业', '属性', '音擎', '缺口', ...targetStats]);
   const header = `<tr>${colOrder
@@ -327,14 +363,20 @@ export function renderTable(list, container) {
   if (tableSort.active) {
     rowObjs = tableSort.apply(rowObjs, (row, key) => row.sortVals[key]);
   }
-  container.innerHTML = `<div class="tbl-wrap"><table class="tbl" id="汇总表">${header}${rowObjs.map((r) => r.html).join('')}</table></div>`;
+  // 未拥有灰行固定在拥有行之后：不参与行序/表头排序（分组钉死，见 Q12）
+  const unownedRows = unowned.map((name) => unownedRowHtml(name, colOrder)).join('');
+  container.innerHTML = `<div class="tbl-wrap"><table class="tbl" id="汇总表">${header}${rowObjs
+    .map((r) => r.html)
+    .join('')}${unownedRows}</table></div>`;
 }
 
 // ---------- 表格拖拽排序（行/列） ----------
 /** 当前可见行/列序（DOM 实时，含默认数据序/表头排序后的显示序/新加行）。
  *  拖拽基序必须完整：readRowOrder()/readColOrder() 的默认 [] 是 truthy，`|| 默认序.map` 类兜底不触发，
  *  曾导致「首个拖拽只存被拖的那一行/列，其余从未拖过的行列永远排不进自定义序」。 */
-const visibleRowNames = () => [...grid.querySelectorAll('tr[data-char]')].map((tr) => tr.dataset.char);
+// 行序只含已拥有行（未拥有灰行 data-unowned，不参与行序/拖拽）
+const visibleRowNames = () =>
+  [...grid.querySelectorAll('tr[data-char]')].filter((tr) => !tr.dataset.unowned).map((tr) => tr.dataset.char);
 const visibleColNames = () => [...grid.querySelectorAll('th[data-col]')].map((th) => th.dataset.col);
 let dragRow = null,
   dragCol = null;
@@ -358,14 +400,15 @@ grid.addEventListener('dragover', (e) => {
   grid.querySelectorAll('.drag-over').forEach((x) => x.classList.remove('drag-over'));
   const tr = e.target.closest('tr[data-char]');
   const th = e.target.closest('th[data-col]');
-  if (dragRow && tr && tr.dataset.char !== dragRow) tr.classList.add('drag-over');
+  // 未拥有灰行不可作为拖拽落点（拥有组固定在前）
+  if (dragRow && tr && !tr.dataset.unowned && tr.dataset.char !== dragRow) tr.classList.add('drag-over');
   if (dragCol && th && th.dataset.col !== dragCol) th.classList.add('drag-over');
 });
 grid.addEventListener('drop', (e) => {
   if (!e.target.closest('table.tbl')) return;
   const tr = e.target.closest('tr[data-char]');
   const th = e.target.closest('th[data-col]');
-  if (dragRow && tr && tr.dataset.char !== dragRow) {
+  if (dragRow && tr && !tr.dataset.unowned && tr.dataset.char !== dragRow) {
     // 以当前可见行序为基（完整含全部行）：被拖行移除后插到目标行原位置，保存为全局行序
     const order = visibleRowNames().filter((n) => n !== dragRow);
     const idx = order.indexOf(tr.dataset.char);
@@ -412,10 +455,11 @@ export function syncGoalAccRowInDom() {
     mountCharts();
     return;
   }
+  const accHtml = renderGoalAccordionHtml(expandedChar); // 未拥有/拥有共用同构面板（内部按账号有无输出 —）
   const colCount = grid.querySelectorAll('th[data-col]').length || 1;
   const tr = document.createElement('tr');
   tr.className = 'goal-acc-row';
-  tr.innerHTML = `<td colspan="${colCount}"><div class="goal-acc-body">${renderGoalAccordionHtml(expandedChar)}</div></td>`;
+  tr.innerHTML = `<td colspan="${colCount}"><div class="goal-acc-body">${accHtml}</div></td>`;
   target.insertAdjacentElement('afterend', tr);
   mountCharts(); // 就地展开：挂载新手风琴行的技能分布图（pending 里是刚 register 的 goal-skill-dist）
 }

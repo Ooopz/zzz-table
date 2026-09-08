@@ -83,7 +83,8 @@ function computeGoals() {
   const roles = workshopGrad.roles || [];
   const role = roles.find((r) => r.name === name) || roles.find((r) => alignRoleName(r.name) === name);
   const skillModes = role ? workshopStats.skillLevelModes?.[role.item_id] : null;
-  const skillInfo = my && skillModes ? { skills: my.skills, modes: skillModes } : null;
+  // 众数(全服)不依赖账号：未拥有角色也能给「目标等级」；skills 仅在拥有时存在
+  const skillInfo = skillModes ? { skills: my?.skills || [], modes: skillModes } : null;
   // 只返回实际消费的字段（names/effective/gapByType 为随「缺口合并」退役的遗留，已不下发）
   return { name, my, R, saved, gap, neededTypes, validTypes, improveProbs, skillInfo };
 }
@@ -114,8 +115,14 @@ export function charTargetInfo(name, attrs) {
  *  probKeep = 保词条（各有效词条命中不缩水）的更严格口径；p4/p3 = 初始 4/3 词条盘的纯条件概率。
  *  概率最高 = 当前盘最弱 = 最值得重刷，该卡拿全套强调（警示黄编号 + 「先刷」图章 + 光晕）。 */
 function discCardsHtml(g) {
-  if (!g.my || !g.my.discs) {
-    return emptyState('还没有该角色的账号数据，无法展示驱动盘详情。<br>请先在「我的角色」完成同步。');
+  if (!g.my || !Array.isArray(g.my.discs)) {
+    // 未拥有 / 无盘面数据：保留块结构，内容用占位说明（与「缺数据 → 暂无」口径一致）
+    return `<div class="goal-top">
+      <div class="goal-top-head">
+        <h4 class="dp-slots-title"><span>驱动盘提升</span><button class="chart-hint" data-hint="${escapeHtml('驱动盘提升 = 重刷概率三口径，口径同「模拟 → 驱动盘提升模拟」。未拥有该角色时无当前盘面，无法计算。')}">?</button></h4>
+      </div>
+      <div class="ds-dim" style="padding:12px 14px">— 未拥有该角色，无当前盘面，驱动盘提升 / 重刷概率不适用 —</div>
+    </div>`;
   }
   const probBySlot = new Map(g.improveProbs.map((r) => [r.pos, r]));
   const best = g.improveProbs.filter((r) => r.prob > 0).sort((a, b) => b.prob - a.prob)[0] || null;
@@ -190,36 +197,47 @@ function discCardsHtml(g) {
  *  标题同「驱动盘提升」（dp-slots-title + ? 提示）；技能 6 格（图标 + Lv.当前/目标，达标 ✓）悬浮看说明，下方紧跟分布图。 */
 function roleDetailStripHtml(g) {
   const my = g.my;
-  if (!my) return '';
+  const hasAcc = !!my;
   // 技能养成（技能信息 + 目标等级结合）：图标 + 当前Lv/目标(玩家众数) + 达标 ✓（进度条与差 N 级徽章已删）
   // canonical 顺序（普攻/闪避/支援/特殊/终结/核心）；账号技能为官方 type，经 OFFICIAL_SKILL_TYPE 映射
   // ⚠️ 图标用 skillIcon(图标键)：skillIconForType 期待官方 type（1特殊/2闪避），直接传 canonical 会错位（曾致图标乱）
+  // 未拥有角色：hasAcc=false → 无账号技能，当前等级全 —，目标(全服众数)照常给
   const SKILL_ICON_KEY = { 0: 'normal', 1: 'dodge', 2: 'support', 3: 'special', 4: 'ultimate', 5: 'core' };
   const modes = g.skillInfo?.modes;
   const skillsHtml = SKILL_TYPES.map((t) => {
-    const s = (my.skills || []).find((x) => OFFICIAL_SKILL_TYPE[x.type] === t.key);
-    if (!s) return '';
-    const cur = s?.level ?? 0;
+    const s = hasAcc ? (my.skills || []).find((x) => OFFICIAL_SKILL_TYPE[x.type] === t.key) : null;
+    if (hasAcc && !s) return '';
+    const cur = s?.level ?? null;
     const mode = modes?.[t.key];
     const icon = skillIcon(SKILL_ICON_KEY[t.key]);
-    const detail = (s.items || []).map((it) => richItemHtml(it.title, it.text)).join('<div class="tip-hr"></div>');
-    const tip = `<b>${escapeHtml(t.label)}</b>${detail ? `<br>${detail}` : ''}${mode ? `<div class="tip-hr"></div>目标等级 = 玩家样本该技能众数 ${mode}${cur && cur < mode ? `（当前差 ${mode - cur} 级）` : ''}` : ''}`;
-    // 无众数目标（样本缺该技能）：只显示当前等级
+    const detail = s && (s.items || []).length
+      ? (s.items || []).map((it) => richItemHtml(it.title, it.text)).join('<div class="tip-hr"></div>')
+      : '';
+    const tip =
+      `<b>${escapeHtml(t.label)}</b>` +
+      (!hasAcc ? '<br><span style="color:var(--dim)">未拥有 — 无个人技能等级</span>' : '') +
+      (detail ? `<br>${detail}` : '') +
+      (mode
+        ? `<div class="tip-hr"></div>目标等级 = 玩家样本该技能众数 ${mode}` +
+          (hasAcc && cur != null && cur < mode ? `（当前差 ${mode - cur} 级）` : '')
+        : '');
+    const curTxt = cur != null ? cur : '—';
+    // 无众数目标（样本缺该技能）：只显示当前等级（未拥有则为 —）
     if (!mode) {
-      return `<span class="sc-cell" data-detail="${escapeHtml(tip)}"><span class="sc-top"><img class="skill-icon" src="${icon}" alt=""></span><b class="sc-lv"><span class="lv-lv">Lv.</span><span class="lv-cur">${cur}</span></b></span>`;
+      return `<span class="sc-cell" data-detail="${escapeHtml(tip)}"><span class="sc-top"><img class="skill-icon" src="${icon}" alt=""></span><b class="sc-lv"><span class="lv-lv">Lv.</span><span class="lv-cur">${curTxt}</span></b></span>`;
     }
-    const done = cur >= mode;
-    // 状态染色：达标 = 等级数值标绿（sc-done）；等级不够 = 标红（sc-missing）；无目标的格子不染色
-    return `<span class="sc-cell${done ? ' sc-done' : ' sc-missing'}" data-detail="${escapeHtml(tip)}">
+    const done = hasAcc && cur != null && cur >= mode;
+    const miss = hasAcc && cur != null && cur < mode;
+    const cls = done ? ' sc-done' : miss ? ' sc-missing' : '';
+    return `<span class="sc-cell${cls}" data-detail="${escapeHtml(tip)}">
       <span class="sc-top"><img class="skill-icon" src="${icon}" alt=""></span>
-      <b class="sc-lv"><span class="lv-lv">Lv.</span><span class="lv-cur">${cur}</span><i>/</i><span class="lv-mode">${mode}</span></b>
+      <b class="sc-lv"><span class="lv-lv">Lv.</span><span class="lv-cur">${curTxt}</span><i>/</i><span class="lv-mode">${mode}</span></b>
     </span>`;
   })
     .filter(Boolean)
     .join('');
-  // 影画/觉醒已移出条带（2026-08）：见 msAwakenBlocks；技能行与分布图合并进同一方框
-  // 网格占满全宽、下方分布图同容器同内边距 → 6 列与 6 子图列精确对齐
-  const skillTip = `<b>技能养成</b><br><span style="color:var(--dim)">当前等级 vs 玩家样本该技能众数（目标）；下方分布图 = 玩家样本各等级玩家数，<b>金色柱 = 我的等级</b>，悬浮看等级与人数。</span>`;
+  // 影画/觉醒见 msAwakenRow；技能行与分布图合并进同一方框（网格 6 列与 6 子图列精确对齐）
+  const skillTip = `<b>技能养成</b><br><span style="color:var(--dim)">当前等级 vs 玩家样本该技能众数（目标）；下方分布图 = 玩家样本各等级玩家数，<b>金色柱 = 我的等级</b>（未拥有则无金色柱），悬浮看等级与人数。</span>`;
   return `<div class="role-detail">
     <h4 class="dp-slots-title">技能养成<button class="chart-hint" data-hint="${escapeHtml(skillTip)}">?</button></h4>
     ${skillsHtml ? `<div class="sc-grid">${skillsHtml}</div>` : ''}
@@ -231,7 +249,12 @@ function roleDetailStripHtml(g) {
 /** 影画 / 觉醒 并排一行（归入技能养成方框最下方，2026-08）：保持圆点形态，标签+计数同行。 */
 function msAwakenRow(g) {
   const my = g.my;
-  if (!my) return '';
+  if (!my) {
+    // 未拥有：无影画/觉醒数据 → 同结构占位 —
+    const dash = (label) =>
+      `<span class="ms-col"><span class="rd-label">${label}</span><span class="ms-dots"><span class="ds-dim">—</span></span></span>`;
+    return `<div class="ms-row">${dash('影画')}${dash('觉醒')}</div>`;
+  }
   const msRanks = my.mindscape?.ranks || [];
   const msUnlocked = msRanks.filter((r) => r.isUnlocked).length;
   const mindscapeHtml = msRanks
@@ -438,11 +461,17 @@ export function renderGoalAccordionHtml(charName) {
   }
   setGoalChar(charName); // goalEdit 弹窗依赖 goalChar 模块态
   const g = computeGoals();
+  // 未拥有角色：与拥有同构的完整面板，账号不可得值由各渲染器以 — 占位；顶部一次性说明来源
+  const unowned = !myCharacters.some((c) => c.name === charName);
   // 顶部双栏（宽时左右、窄时自动堆叠）：左 = 技能提升，右 = 配装对标两条细横条；盘卡通栏；分布×三档与配比散点共用一个框
   const panelDistHtml = renderPanelDistHtml(g);
   const scatterHtml = renderScatterSection(g);
   const distBox = panelDistHtml || scatterHtml ? `<div class="panel-dist">${panelDistHtml}${scatterHtml}</div>` : '';
+  const note = unowned
+    ? `<div class="uowned-note">未拥有该角色 —— <code>—</code> 表示无个人数据（技能/影画/觉醒/盘面/「我的」列等），其余均为全服 / 推荐参考。</div>`
+    : '';
   return `<div class="goal-acc">
+    ${note}
     <div class="goal-top2">
       <div class="goal-top2-left">${roleDetailStripHtml(g)}</div>
       <div class="goal-top2-right">${renderBuildBenchHtml(g)}</div>

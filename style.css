@@ -3533,3 +3533,12 @@ header h1,
 .sc-cell.sc-missing .sc-lv {
   color: var(--red);
 }
+
+/* 「角色」视图：全角色列表 —— 未拥有灰行 & 顶部工具 & 未拥有手风琴参考 */
+.roles-tools{display:flex;justify-content:flex-end;padding:6px 12px 2px;font-size:12px;color:var(--dim,#8a8f98);}
+.roles-tools label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;}
+tr.row-unowned td{opacity:.5;filter:saturate(.7);}
+tr.row-unowned td .mini[disabled]{opacity:.5;cursor:not-allowed;}
+.goal-acc .uowned-note{margin:6px 12px 10px;color:var(--dim,#8a8f98);font-size:12px;display:flex;align-items:center;gap:8px;}
+.goal-acc .u-blk-title{font-size:12px;color:var(--dim,#8a8f98);margin-bottom:6px;}
+.goal-acc .urow{display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:13px;}

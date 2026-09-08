@@ -45,12 +45,12 @@ export function serializeCookies(cookies) {
 }
 
 /** 收集米游社关键 cookie 的脚本：既作为书签小工具（bookmarklet）也作为控制台脚本（命令行与网页共用）。
- *  只挑登录必需的白名单 key——ltoken/ltuid/account_id 是游戏数据接口主登录态；
- *  DEVICEFP/_MHYUUID 是设备指纹（缺失触发风控 retcode 10035/10041）；e_nap_token 始终尝试收集
- *  （mihoyo 域共享，任何米游社页面通常都能读到；仅同步推荐方案用），提示按当前页面是否养成指南区分。
+ *  主登录态 ltoken/ltoken_v2 + ltuid/ltuid_v2 + account_id：新版登录只下发 *_v2（旧 ltoken 不再有），
+ *  发送端自动把 ltoken_v2 补成 ltoken（见 mihoyo-api.js requestJson 的别名逻辑），故两者都收、看会话给哪个；
+ *  DEVICEFP/_MHYUUID 是设备指纹（缺失触发风控 retcode 10035/10041）；e_nap_token 仅同步推荐方案用。
  *  SToken/mi18nLang 等经实测非接口必需，不收集。 */
 export const CLIPBOARD_SCRIPT = `(function () {
-  var must = ['DEVICEFP', '_MHYUUID', 'ltoken', 'ltuid', 'account_id', 'e_nap_token'];
+  var must = ['DEVICEFP', '_MHYUUID', 'ltoken', 'ltoken_v2', 'ltuid', 'ltuid_v2', 'account_id', 'e_nap_token'];
   var got = {};
   document.cookie.split(';').forEach(function (p) {
     var i = p.indexOf('=');

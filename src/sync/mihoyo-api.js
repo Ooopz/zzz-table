@@ -22,8 +22,16 @@ export const MHY_DEVICE = {
  * 走网络错误分支并入重试。传 timeout: 0 关闭。
  */
 const REQUEST_TIMEOUT_MS = 30_000;
+/** 米游社新版登录只下发 ltoken_v2（不再有旧 ltoken），而 act 游戏工具接口仍按旧 ltoken 校验（同步推荐方案曾报
+ *  retcode -100 登录失效）。发送前若缺 ltoken 但有 ltoken_v2，用 v2 值补上。ltoken_v2 常为 HttpOnly，书签读不到，
+ *  只能经 DevTools 整段复制 Cookie 头入库后由这里统一补齐。返回新对象，不改入参。 */
+export function withLtokenAlias(cookies) {
+  if (!cookies) return cookies;
+  if (cookies.ltoken || !cookies.ltoken_v2) return cookies;
+  return { ...cookies, ltoken: cookies.ltoken_v2 };
+}
 export async function requestJson(url, { headers = {}, cookies = null, retry = null, timeout = REQUEST_TIMEOUT_MS } = {}) {
-  const cookie = cookies ? serializeCookies(cookies) : null;
+  const cookie = cookies ? serializeCookies(withLtokenAlias(cookies)) : null;
   let attempt = 0;
   for (;;) {
     let res, j;

@@ -1,6 +1,6 @@
 // src/web/render.js —— 渲染调度：全局悬浮提示 + 主视图分发
 // 「我的角色」汇总渲染与拖拽排序在 myChars.js；资料视图各库归 wiki.js（总览子面板 metaOverview.js）、驱动盘工作台 discstats.js、模拟 simulate.js。
-import { grid, myCharacters, userConfig, isStatic } from './data.js';
+import { grid, myCharacters, userConfig, isStatic, sortRoleNames, saveUserConfig } from './data.js';
 import { VIEWS, VIEW_VALUES } from '../lib/constants.js';
 import { renderWiki, toggleWikiSort } from './wiki.js';
 import { renderDrivenDiscs } from './discstats.js';
@@ -104,8 +104,8 @@ grid.addEventListener('click', (e) => {
 
 /** 主视图解析：URL/配置中的 view 值；非法值（含已迁移的旧值）回退 mychars */
 function resolveView() {
-  const raw = new URLSearchParams(location.search).get('view') || userConfig.view || VIEWS.MY_CHARS;
-  return { view: VIEW_VALUES.has(raw) ? raw : VIEWS.MY_CHARS };
+  const raw = new URLSearchParams(location.search).get('view') || userConfig.view || VIEWS.ROLES;
+  return { view: VIEW_VALUES.has(raw) ? raw : VIEWS.ROLES };
 }
 
 // ---------- 渲染调度 ----------
@@ -156,21 +156,33 @@ export function render() {
     mountCharts();
     return;
   }
-  // 我的角色：汇总表 + 手风琴练度面板
+  // 「角色」视图：已拥有角色置顶（Character 实例，可拖/排序）+ 未拥有角色灰显
+  const ownedSet = new Set(myCharacters.map((c) => c.name));
+  const showUnowned = userConfig.showAll !== false; // 默认全显（含未拥有灰行）
+  const unowned = showUnowned ? sortRoleNames(null).filter((n) => !ownedSet.has(n)) : [];
+  // 完全无账号数据（公开站首访/从未导入）：整页全灰 + 顶部引导
+  let banner = '';
   if (!myCharacters.length) {
-    const empty = isStatic()
-      ? '还没有「我的角色」数据。<br>GitHub Pages 静态版无后端：点右上角 <b>「同步数据」→ 数据导入</b>，按提示用采集书签在米游社页面抓取后粘贴（数据只存本浏览器）。'
-      : '还没有「我的角色」数据。<br>推荐：运行 <b>npm start</b> 后打开本页，点右上角 <b>更新我的角色</b> 一键拉取（需粘贴一次 cookie）。<br>或命令行运行 <b>npm run sync:characters</b>（效果相同）。';
-    grid.innerHTML = myCharsShell(`<div class="empty">${empty}</div>`);
-    measureTabs();
-    return;
+    banner = `<div class="empty">${
+      isStatic()
+        ? '这是全部角色（灰 = 未拥有）。导入你的账号角色后可看个人练度：右上角 <b>「同步数据」→ 数据导入</b>（数据只存本浏览器）。'
+        : '这是全部角色（灰 = 未拥有）。更新你的账号角色后可看个人练度：右上角 <b>更新我的角色</b>。'
+    }</div>`;
   }
-  const list = myCharacters;
-  grid.innerHTML = myCharsShell();
+  const tools = `<div class="roles-tools"><label class="roles-show-unowned"><input type="checkbox" id="roles-show-unowned"${showUnowned ? ' checked' : ''} /> 显示未拥有（灰）</label></div>`;
+  grid.innerHTML = myCharsShell(banner + tools);
   measureTabs(); // 无二级 tab 栏 → --tabs-h 置 0，汇总表吸顶只让开 header
   const body = grid.querySelector('.mychars-body');
   body.className = 'mychars-body';
-  renderTable(list, body);
+  renderTable(myCharacters, body, { unowned });
+  const t = body.querySelector('#roles-show-unowned');
+  if (t) {
+    t.addEventListener('change', () => {
+      userConfig.showAll = t.checked;
+      saveUserConfig();
+      render();
+    });
+  }
   mountCharts(); // 汇总表：展开的手风琴行可能注册了技能分布图（render 开头已 prune+clear 旧图）
 }
 
