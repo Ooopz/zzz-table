@@ -128,13 +128,18 @@ export function coreSkillBoostAt(libCharacter, name, level = 7) {
 // ---------- 计算引擎 ----------
 
 /** wiki 推算的单属性理论基础值：攻击力 = 角色基础攻击 + 音擎白值 + 核心技当前等级攻击提升；
- *  其余 = wiki 基础 + 核心技数值提升；穿透值无基础（纯装备词条累加）→ 0。 */
-function theoreticalBaseOf(s, { baseSource, wengineAtk, libCharacter, coreLevel }) {
+ *  防御力 = 角色基础防御 + 音擎白值(防御型音擎的 baseDef) + 核心技防御提升；其余 = wiki 基础 + 核心技数值提升；
+ *  穿透值无基础（纯装备词条累加）→ 0。 */
+function theoreticalBaseOf(s, { baseSource, wengineAtk, wengineDefAtk = 0, libCharacter, coreLevel }) {
   if (s === STAT.ATK) {
     const charAtk = baseSource[STAT.ATK] ?? baseSource['基础攻击力'];
     return charAtk != null
       ? atkWhiteValue(charAtk, wengineAtk, coreSkillBoostAt(libCharacter, STAT.ATK, coreLevel))
       : null;
+  }
+  if (s === STAT.DEF) {
+    const bs = baseSource[STAT.DEF] ?? baseSource['基础防御力'];
+    return bs != null ? bs + wengineDefAtk + coreSkillBoostAt(libCharacter, STAT.DEF, coreLevel) : null;
   }
   const bs = baseSource[s];
   return bs != null ? bs + coreSkillBoostAt(libCharacter, s, coreLevel) : s === STAT.PEN_VALUE ? 0 : null;
@@ -190,11 +195,14 @@ export function calculateCharacter(character) {
   const coreLevel = character.skills?.find((s) => s.type === SKILL.CORE)?.level ?? 7;
   const wengineAtk =
     statEntries(wengine.mainStats).find((t) => t.name === '基础攻击力')?.value ?? libWengine?.baseAtk ?? 0;
+  // 防御型音擎（2026 新增 基础防御力 主属性）：白值进「防御力」，攻击侧为 0
+  const wengineDefAtk =
+    statEntries(wengine.mainStats).find((t) => t.name === '基础防御力')?.value ?? libWengine?.baseDef ?? 0;
   // wiki 推算基础值（最终面板推算路径与理论面板共用；贯穿力为派生属性，末尾统一计算）
   const theoBase = {};
   for (const s of panelOrder) {
     if (s === STAT.PIERCE) continue;
-    const tb = theoreticalBaseOf(s, { baseSource, wengineAtk, libCharacter, coreLevel });
+    const tb = theoreticalBaseOf(s, { baseSource, wengineAtk, wengineDefAtk, libCharacter, coreLevel });
     if (tb != null) theoBase[s] = tb;
   }
 

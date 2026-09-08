@@ -49,7 +49,8 @@ export class Wengine {
     this.icon = data.icon || '';
     this.rarity = data.rarity || '';
     this.trait = data.trait || '';
-    this.baseAtk = data.baseAtk ?? null;
+    this.baseAtk = data.baseAtk ?? null; // 攻击型音擎主属性白值
+    this.baseDef = data.baseDef ?? null; // 防御型音擎主属性白值（2026 新增 基础防御力 音擎）
     this.specialEffectTitle = data.specialEffectTitle || '';
     this.specialEffect = data.specialEffect || '';
     this.mainStats = data.mainStats || [];

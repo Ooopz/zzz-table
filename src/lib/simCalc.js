@@ -86,7 +86,7 @@ function fixedPanel(libChar, libWengine, mains) {
   for (const s of PANEL_ORDER) base[s] = null;
   base[STAT.ATK] = (max[STAT.ATK] ?? libChar?.[STAT.ATK] ?? 0) + (libWengine?.baseAtk ?? 0) + coreFlat(STAT.ATK);
   base[STAT.HP] = (max[STAT.HP] ?? libChar?.[STAT.HP] ?? 0) + coreFlat(STAT.HP);
-  base[STAT.DEF] = (max[STAT.DEF] ?? libChar?.[STAT.DEF] ?? 0) + coreFlat(STAT.DEF);
+  base[STAT.DEF] = (max[STAT.DEF] ?? libChar?.[STAT.DEF] ?? 0) + (libWengine?.baseDef ?? 0) + coreFlat(STAT.DEF);
   for (const s of PANEL_ORDER) {
     if (base[s] != null || s === STAT.PEN_VALUE) continue;
     base[s] = (libChar?.[s] ?? 0) + coreFlat(s);

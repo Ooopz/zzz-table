@@ -84,7 +84,11 @@ export function validateLibrary(lib) {
           if (it.growth != null && !Array.isArray(it.growth)) err.push(`角色 ${k} 技能「${s.type}」 growth 应为数组`);
   });
   checkEntries(errors, lib, 'wengines', '音擎', (k, w, err) => {
-    if (w.baseAtk !== undefined && typeof w.baseAtk !== 'number') err.push(`音擎 ${k} baseAtk 应为数字`);
+    const isNum = (v) => typeof v === 'number';
+    const hasMain = (w.baseAtk != null && isNum(w.baseAtk)) || (w.baseDef != null && isNum(w.baseDef));
+    if (!hasMain) err.push(`音擎 ${k} 缺主属性基础值（baseAtk/baseDef）`);
+    else if ((w.baseAtk != null && !isNum(w.baseAtk)) || (w.baseDef != null && !isNum(w.baseDef)))
+      err.push(`音擎 ${k} baseAtk/baseDef 应为数字`);
     if (
       w.subStats !== undefined &&
       w.subStats !== null &&

@@ -293,17 +293,23 @@ function fetchWengineStats(page) {
       const i = s.indexOf('满级面板');
       if (i < 0) continue;
       const seg = s.slice(i, i + 250);
-      const baseAtk = parseFloat((seg.match(/基础攻击力\+([\d.]+)/) || [])[1]);
-      const subMatch = [...seg.matchAll(/([一-鿿A-Za-z]+)[+-]([\d.]+%?)/g)].filter((x) => x[1] !== '基础攻击力')[0];
+      // 主属性可为 基础攻击力 或（2026 新增音擎）基础防御力：主值不再固定为攻击，漏判会把主值当副属性吞掉。
+      const tokens = [...seg.matchAll(/([一-鿿A-Za-z]+)[+-]([\d.]+%?)/g)];
+      const MAIN_OF = (n) => n === '基础攻击力' || n === '基础防御力';
+      const mainT = tokens.find((x) => MAIN_OF(x[1]));
+      const subT = tokens.find((x) => x !== mainT);
+      const mainVal = mainT ? parseFloat(mainT[2]) : NaN;
+      const hasMain = Number.isFinite(mainVal);
       // ⚠️ 必须用 Number.isFinite：正则不匹配时 parseFloat(undefined) === NaN，而 `NaN != null` 为 true，
       // 会在这里提前 return 并写出 baseAtk: NaN（序列化成 null），下面的 attr 兜底分支永远走不到。
       // schema 也拦不住（typeof NaN === 'number'）。
-      const hasAtk = Number.isFinite(baseAtk);
-      if (hasAtk || subMatch) {
+      if (hasMain || subT) {
+        const mainIsDef = mainT?.[1] === '基础防御力';
         return {
-          baseAtk: hasAtk ? baseAtk : null,
-          subStats: subMatch ? { [normalizeStatKey(subMatch[1])]: parseNum(subMatch[2]) } : null,
-          subStatsText: seg.match(/([一-鿿A-Za-z]+[+-][\d.]+%?)/)?.[0] || null,
+          baseAtk: hasMain && !mainIsDef ? mainVal : null,
+          baseDef: hasMain && mainIsDef ? mainVal : null,
+          subStats: subT ? { [normalizeStatKey(subT[1])]: parseNum(subT[2]) } : null,
+          subStatsText: subT?.[0] || null,
           specialEffect,
         };
       }
@@ -319,8 +325,11 @@ function fetchWengineStats(page) {
   const last = attr.slice(-4);
   const baseText = stripHtml(last.find((a) => a.key === '突破后基础')?.value);
   const subStatsText = stripHtml(last.find((a) => a.key === '突破后高级')?.value);
+  const isDef = /基础防御力/.test(baseText || '');
+  const val = parseFloat((String(baseText || '').match(/([\d.]+)/) || [])[1]) || null;
   return {
-    baseAtk: parseFloat((baseText.match(/([\d.]+)/) || [])[1]) || null,
+    baseAtk: !isDef ? val : null,
+    baseDef: isDef ? val : null,
     subStats: parseSignedStat(subStatsText) || null,
     subStatsText,
     specialEffect,
