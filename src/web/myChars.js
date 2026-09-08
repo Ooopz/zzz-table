@@ -24,8 +24,7 @@ import {
   resolveStatCurrent,
   percentSubstats,
 } from '../lib/calc.js';
-import { escapeHtml, escapeJsAttr, formatValue } from '../lib/util.js';
-import { createSort } from '../lib/sort.js';
+import { escapeHtml, escapeJsAttr, formatValue, createSort } from '../lib/util.js';
 import { STAT } from '../lib/constants.js';
 import { discSetEffectsHtml, substatRollsMark } from './shared.js';
 import { mountCharts } from './charts.js';
@@ -137,7 +136,7 @@ function gapCellHtml(character, R) {
 }
 
 // ---------- 汇总表视图 ----------
-// 表头排序状态（asc → desc → 恢复默认 三态，统一走 src/lib/sort.js）
+// 表头排序状态（asc → desc → 恢复默认 三态，统一走 src/lib/util.js）
 const tableSort = createSort();
 export function toggleTableSort(col) {
   tableSort.toggle(col);

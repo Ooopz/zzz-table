@@ -42,13 +42,14 @@
           <h2>使用说明</h2>
           <p>
             <b>如何获取 Cookie（同步「我的角色 / 推荐方案」需要）：</b><br />
-            ① 用浏览器打开 <code>mihoyo.com</code>（米游社官网）并登录你的账号；<br />
-            ② 按 <code>F12</code> 打开开发者工具 → 切到「网络（Network）」标签 → 刷新页面，点任意一个请求，
-            在「请求头（Headers）」里找到 <code>cookie</code> 字段，整段复制（很长，全部复制）；<br />
-            ③ 打开 header 的「同步数据」弹窗，把 Cookie 粘贴到输入框 → 点「保存 cookie」→ 勾选 「更新我的角色 /
+            ① 用浏览器打开米游社页面并登录账号（推荐方案用<b>米游社养成指南</b>、我的角色用<b>米游社个人主页</b>）；<br />
+            ② 在该页按 <code>F12</code> → 「网络（Network）」→ 刷新页面，点开任意一条发往
+            <code>*.mihoyo.com</code> 的请求；<br />
+            ③ 在「请求头（Headers）」里复制整段 <code>Cookie:</code> 值（很长，全部复制）→ 打开 header 的
+            「同步数据」弹窗，把 Cookie 粘贴到输入框 → 点「保存 cookie」→ 勾选「更新我的角色 /
             更新推荐方案」→ 点「更新」。<br />
-            （也可用弹窗里的「米游社 Cookie 书签」一键复制，只需拖一次；Cookie 缓存在本地
-            <code>data/.cookie.json</code>，不回显，需更换时直接覆盖粘贴。）
+            （登录令牌 <code>ltoken/ltoken_v2</code> 是 HttpOnly，书签 / 页面 JS 读不到，只能从 Network 请求头拷贝；
+            Cookie 缓存在本地 <code>data/.cookie.json</code>，不回显，需更换时直接覆盖粘贴。）
           </p>
           <p>
             <b>同步数据：</b>「同步数据」弹窗可勾选四项——<b>更新数据库</b>（角色/音擎/驱动盘/邦布基础数据，无需登录）、
@@ -134,27 +135,23 @@
           <div id="syncErrors" class="sync-errors"></div>
           <h3 style="margin-top: 14px">获取cookie</h3>
           <p style="color: var(--dim); font-size: var(--fs-sm)">
-            ① 打开
+            ① 打开米游社页面并登录：同步<b>推荐方案</b>用
             <a
               href="https://act.mihoyo.com/zzz/event/character-builder/index.html?game_biz=nap_cn&mhy_auth_required=1"
               target="_blank"
               rel="noopener"
               >米游社养成指南</a
             >
-            （需已登录，页面含 <code>e_nap_token</code> 登录态）。<br />
-            ② 把下面的
-            <a id="syncBookmarklet" href="#" data-detail="拖到浏览器书签栏，以后一键收集">米游社 Cookie 书签</a>
-            <b>拖到书签栏</b>（只需一次）。<br />
-            ③ 之后在养成指南页<b>点一下书签</b>，自动把关键 cookie 复制到剪贴板；回本页粘贴到下方文本框保存。<br />
-            「更新我的角色」与「更新推荐方案」需要；<code>e_nap_token</code> 有效期较短，过期需重新导出。
+            （页面含 <code>e_nap_token</code> 登录态）；同步<b>我的角色</b>用
+            <a href="https://user.mihoyo.com/#/home/account-overview" target="_blank" rel="noopener">米游社个人主页</a
+            >。<br />
+            ② 在该页 F12 → <b>Network</b> → 刷新/操作几下，点开任意一条发往 <code>*.mihoyo.com</code> 的请求
+            （推荐方案找 <code>act-api-takumi.mihoyo.com</code>）。<br />
+            ③ 复制该请求 <b>Request Headers → Cookie:</b> 整段值（很长，全部复制）→ 粘贴到下方输入框 → 点
+            「保存 cookie」。<br />
+            （登录令牌 <code>ltoken/ltoken_v2</code> 是 HttpOnly，书签 / 页面 JS 读不到，只能从 Network 拷贝；
+            <code>e_nap_token</code> 有效期较短，过期需重新导出。）
           </p>
-          <pre id="syncCookieSnippet" class="snippet"></pre>
-          <div class="row">
-            <button id="syncCopy" class="ghost">复制脚本</button>
-            <span style="font-size: var(--fs-xs); color: var(--dim)"
-              >（备选：F12 → 控制台粘贴运行，效果与书签相同）</span
-            >
-          </div>
           <div id="syncCookieState" class="sync-cookie-state"></div>
           <textarea
             id="syncCookieInput"

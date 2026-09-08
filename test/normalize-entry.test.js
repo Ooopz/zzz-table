@@ -113,3 +113,24 @@ test('normalizeEntry：source 缺失 → 按 equips rarity 类型回填（number
   assert.equal(normalizeEntry({ equips: [] }).source, null);
   assert.equal(normalizeEntry(null), null);
 });
+
+test('normalizeEntry：百分比字符串一律 ×100（穿透率等名字不在旧集合也乘）', () => {
+  const e = normalizeEntry({
+    source: 'mys',
+    equips: [
+      { main: [{ name: '穿透率', value: '24%' }] }, // 曾漏乘 → 24
+      { main: [{ name: '暴击伤害', value: '48%' }] },
+    ],
+  });
+  assert.equal(e.equips[0].main[0].value, 2400);
+  assert.equal(e.equips[1].main[0].value, 4800);
+});
+
+test('normalizeEntry：固定值字符串（无 %）不乘 100；数字值原样透传', () => {
+  const e = normalizeEntry({
+    source: 'mys',
+    equips: [{ main: [{ name: '生命值', value: '2200' }] }, { main: [{ name: '攻击力', value: 316 }] }],
+  });
+  assert.equal(e.equips[0].main[0].value, 2200);
+  assert.equal(e.equips[1].main[0].value, 316);
+});

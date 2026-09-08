@@ -1,6 +1,5 @@
 // src/web/ui.js —— 交互层：目标/有效/备注/技能弹窗、事件绑定、初始化（URL 状态见 urlState.js，同步中心见 sync.js）
-import { escapeHtml, escapeJsAttr, formatValue } from '../lib/util.js';
-import { createSort } from '../lib/sort.js';
+import { escapeHtml, escapeJsAttr, formatValue, createSort } from '../lib/util.js';
 import { registerZZZ } from './shared.js';
 // (弹窗勾选现为副词条粒度，无需 percentSubstats)
 import {
@@ -101,7 +100,7 @@ async function saveTargetSettings() {
   if (ok) notify(`${currentTargetChar} 养成配置已保存`);
 }
 
-/** 方案表格排序（三态：升序→降序→恢复默认，走 src/lib/sort.js） */
+/** 方案表格排序（三态：升序→降序→恢复默认，走 src/lib/util.js） */
 const planSort = createSort();
 function togglePlanSort(key) {
   planSort.toggle(key);

@@ -1,7 +1,7 @@
 // src/web/sync.js —— 服务器一键同步中心（从 ui.js 拆出，2026-11）
 // 职责：同步弹窗（勾选/新鲜度/cookie/进度轮询）+ 四个同步的请求封装。
 // 入口 initSync() 绑定弹窗按钮（ui.js 的 initUi 调用）；syncWorkshopData 供「工坊更新」快捷入口复用。
-import { CLIPBOARD_SCRIPT, escapeHtml } from '../lib/util.js';
+import { escapeHtml } from '../lib/util.js';
 import { apiRequest, postJSON, notify } from './api.js';
 import { SYNC_KINDS } from '../lib/constants.js';
 import { isStatic, importCharacters, clearLocalChars, myCharacters } from './data.js';
@@ -89,10 +89,6 @@ function renderCookieState(cached, savedAt) {
 /** 打开同步中心弹窗：填充数据新鲜度 + cookie 缓存状态（明文不回显，只提示已保存与保存时间） */
 async function openSyncCenter() {
   const j = await apiRequest('/api/sync-status', { method: 'GET' });
-  document.getElementById('syncCookieSnippet').textContent = CLIPBOARD_SCRIPT;
-  // 书签小工具：同一脚本编码成 javascript: URI，拖到书签栏后点一下即可收集（免 F12/控制台）
-  const bm = document.getElementById('syncBookmarklet');
-  if (bm) bm.href = 'javascript:' + encodeURIComponent(CLIPBOARD_SCRIPT);
   const input = document.getElementById('syncCookieInput');
   input.value = '';
   input.placeholder = j && j.cached ? '已缓存 cookie（不回显）；需更换时在此粘贴新的' : '尚未缓存 cookie，请粘贴';
@@ -205,17 +201,6 @@ async function saveCookie() {
   } else notify('保存失败：' + ((j && j.error) || '无法连接本地服务器'), 10);
 }
 
-/** 复制代码到剪贴板（指南脚本/命令） */
-function copyText(text, label) {
-  if (navigator.clipboard?.writeText) {
-    navigator.clipboard
-      .writeText(text)
-      .then(() => notify(`${label}已复制到剪贴板`))
-      .catch(() => notify('复制失败，请手动框选复制'));
-  } else {
-    notify('当前浏览器不支持一键复制，请手动框选复制');
-  }
-}
 
 /** 绑定同步中心弹窗按钮（ui.js 的 initUi 调用；syncModal 的 Esc 关闭由 ui.js 的全局 keydown 兜底） */
 export function initSync() {
@@ -229,9 +214,6 @@ export function initSync() {
   document
     .getElementById('syncClose')
     .addEventListener('click', () => document.getElementById('syncModal').classList.remove('show'));
-  document
-    .getElementById('syncCopy')
-    .addEventListener('click', () => copyText(document.getElementById('syncCookieSnippet').textContent, '脚本'));
   document.getElementById('syncCookieSave').addEventListener('click', saveCookie);
 }
 

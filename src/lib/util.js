@@ -44,34 +44,8 @@ export function serializeCookies(cookies) {
     .join('; ');
 }
 
-/** 收集米游社关键 cookie 的脚本：既作为书签小工具（bookmarklet）也作为控制台脚本（命令行与网页共用）。
- *  主登录态 ltoken/ltoken_v2 + ltuid/ltuid_v2 + account_id：新版登录只下发 *_v2（旧 ltoken 不再有），
- *  发送端自动把 ltoken_v2 补成 ltoken（见 mihoyo-api.js requestJson 的别名逻辑），故两者都收、看会话给哪个；
- *  DEVICEFP/_MHYUUID 是设备指纹（缺失触发风控 retcode 10035/10041）；e_nap_token 仅同步推荐方案用。
- *  SToken/mi18nLang 等经实测非接口必需，不收集。 */
-export const CLIPBOARD_SCRIPT = `(function () {
-  var must = ['DEVICEFP', '_MHYUUID', 'ltoken', 'ltoken_v2', 'ltuid', 'ltuid_v2', 'account_id', 'e_nap_token'];
-  var got = {};
-  document.cookie.split(';').forEach(function (p) {
-    var i = p.indexOf('=');
-    if (i < 0) return;
-    var k = p.slice(0, i).trim();
-    if (must.indexOf(k) >= 0) got[k] = p.slice(i + 1).trim();
-  });
-  var keys = Object.keys(got);
-  var out = keys.map(function (k) { return k + '=' + got[k]; }).join('; ');
-  var missing = must.filter(function (k) { return !(k in got); });
-  var isNap = location.href.indexOf('nap') >= 0;
-  var msg = '已收集 ' + keys.length + ' 个关键 cookie：' + (out || '(无)');
-  if (missing.length) msg += '\\n\\n缺失：' + missing.join(', ') + '（请确认已登录米游社后重试）';
-  if (isNap && !got.e_nap_token) msg += '\\n\\n当前在养成指南页但未取到 e_nap_token，请确认右上角已登录';
-  if (!isNap && !got.e_nap_token) msg += '\\n\\n（未取 e_nap_token：如需同步推荐方案，请到养成指南页再点一次书签）';
-  msg += '\\n\\n回到配装面板「数据同步」弹窗粘贴保存即可。';
-  function fallback() { prompt('请手动复制以下 cookie（Ctrl+C）：', out); }
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(out).then(function () { alert(msg + '\\n\\n✓ 已复制到剪贴板'); }, fallback);
-  } else fallback();
-})();`;
+// 说明：米游社 cookie 采集书签（旧 CLIPBOARD_SCRIPT）已移除 —— 登录令牌 ltoken(_v2) 现为 HttpOnly，
+// 页面 JS（document.cookie/书签/控制台）一律读不到，只能从 DevTools → Network 请求头的 Cookie: 字段拷贝。
 
 /** 转义用于 data-detail 属性（dataset 读取时还原，内嵌 HTML 照常渲染）。
  *  用 ?? 而非 ||：`escapeHtml(0)` 曾返回空串，把合法的 0 从 DOM 里抹掉。 */
@@ -248,4 +222,42 @@ export function decodeHtmlEntities(s) {
 /** 命破角色贯穿力 = 0.3×攻击 + 0.1×生命（calc/simCalc 共用；任一缺失返回 null） */
 export function pierceStat(a, h) {
   return a != null && h != null ? Math.round(0.3 * a + 0.1 * h) : null;
+}
+
+// ---------- 表头三态排序（自旧 sort.js 并入） ----------
+/** 表头三态排序（asc→desc→复位）状态机 + 空值（null/undefined/空串）行恒排最后的排序应用；双端共享纯模块。
+ *  返回 { key, dir, active, toggle(key), reset(), apply(list, val) }；apply 未激活时原样返回 list（保持原引用）；
+ *  表头 ▲/▼ 指示由各视图自行渲染。 */
+export function createSort() {
+  let s = { key: null, dir: 1 };
+  return {
+    get key() {
+      return s.key;
+    },
+    get dir() {
+      return s.dir;
+    },
+    get active() {
+      return s.key != null;
+    },
+    toggle(key) {
+      if (s.key === key) s = s.dir === 1 ? { key, dir: -1 } : { key: null, dir: 1 };
+      else s = { key, dir: 1 };
+    },
+    reset() {
+      s = { key: null, dir: 1 };
+    },
+    apply(list, val) {
+      if (!s.key) return list;
+      const { key, dir } = s;
+      return [...list].sort((a, b) => {
+        const va = val(a, key),
+          vb = val(b, key);
+        if (isEmptyVal(va) && isEmptyVal(vb)) return 0;
+        if (isEmptyVal(va)) return 1;
+        if (isEmptyVal(vb)) return -1;
+        return compareValues(va, vb) * dir;
+      });
+    },
+  };
 }

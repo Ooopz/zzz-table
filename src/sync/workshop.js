@@ -9,7 +9,7 @@ import { canonicalName, CATEGORY } from '../lib/names.js';
 import { iterWorkshopFile, readLines, writeWorkshopFile, DATA_DIR, pool, writeJsonAtomic } from '../lib/node.js';
 import { apiGet, apiPost } from './workshop-api.js';
 import { buildWorkshopStats, fetchWorkshopGrad, OUT_FILE } from './workshop-stats.js';
-import { computeEnkaPanel, propName } from './workshop-panel.js';
+import { computeEnkaPanel, propName, RARITY_GROWTH } from './workshop-panel.js';
 import { items } from './workshop-static.js'; // 装备表（buildCtx 的 ctx.items 供 2025 源配装映射）
 import { loadNameIndexes, emptyNameIndexes, resolveWengineName } from './name-index.js';
 import { sleep } from './mihoyo-api.js';
@@ -89,7 +89,9 @@ export function isMaxedRole(role) {
   // 音擎等级（mys: ij.weapon.level；2025: ij.Weapon.Level）
   const wpnLv = ij.weapon ? ij.weapon.level : ij.Weapon ? ij.Weapon.Level : null;
   if (!(wpnLv >= 60)) return false;
-  // 驱动盘：恰 6 块且每块 15 级 + R5（mys: ij.equip[]；2025: ij.EquippedList[].Equipment）
+  // 驱动盘：恰 6 块且每块 15 级。15 级仅 R5 可达（R4 上限 +12），故无需强查 rarity；
+  // 但**显式**给出非 R5（如 R4）仍应拒——2025 源盘对象不暴露 rarity（undefined）按 15 级=R5 放行。
+  // mys: ij.equip[]；2025: ij.EquippedList[].Equipment
   const discs =
     Array.isArray(ij.equip) && ij.equip.length ? ij.equip : Array.isArray(ij.EquippedList) ? ij.EquippedList : null;
   if (!discs || discs.length !== 6) return false;
@@ -97,7 +99,7 @@ export function isMaxedRole(role) {
     const lv = d && d.level != null ? d.level : d && d.Equipment ? d.Equipment.Level : null;
     if (lv !== 15) return false;
     const rar = d && d.rarity != null ? d.rarity : d && d.Equipment ? d.Equipment.Rarity : null;
-    if (rar !== 5) return false;
+    if (rar != null && rar !== 5) return false;
   }
   return true;
 }
@@ -178,13 +180,17 @@ export function extractBuild(v3Data, roleId, ctx) {
         // 套装名解析为 wiki 标准盘名（工坊 artifacts 名可能带尾随空格）
         const suitName = suit ? canonicalName(CATEGORY.DISC, libDiscs, suit.name) || suit.name : null;
         const main = eq.MainPropertyList && eq.MainPropertyList[0];
+        // 主词条 PropertyValue 是「初始值」：S 级每级成长 = 初始×0.2（RARITY_GROWTH，5 级盘不在表内默认 0.2）。
+        // 落地须补成长到该等级最终值，与 mys 源(满级最终值)同口径：最终 = 初始×(1+level×growth)，lv15(S)→×4。
+        const growth = item ? RARITY_GROWTH[item.Rarity] ?? 0.2 : 0.2;
+        const mainVal = main ? Math.round(main.PropertyValue * (1 + eq.Level * growth)) : null;
         return {
           id: eq.Id,
           name: suitName,
           level: eq.Level,
           rarity: item ? item.Rarity : null,
           suit: suitName,
-          main: main ? [{ name: propName(main.PropertyId), value: main.PropertyValue }] : [],
+          main: mainVal != null ? [{ name: propName(main.PropertyId), value: mainVal }] : [],
           subs: (eq.RandomPropertyList || []).map((p) => ({
             name: propName(p.PropertyId),
             value: p.PropertyValue * p.PropertyLevel,
@@ -208,7 +214,7 @@ export function extractBuild(v3Data, roleId, ctx) {
 // 规范：subs/main 的 name = 规范属性名（攻击力%/暴击率…）、value = ×100 整数百分比（480 = 4.8%）或固定值整数；
 // source 标记保留（仅样本覆盖统计消费）；rarity 整个丢弃（无下游消费，且 2025 weapon.rarity 实为武器等级，语义本不一致）。
 // ⚠️ 这是全链路唯一按 source 转换值的地方——清洗后消费方一律不再按源分叉。
-const PCT_SUBSTATS = new Set(['暴击率', '暴击伤害', '攻击力%', '生命值%', '防御力%']);
+const PCT_SUBSTATS = new Set(['暴击率', '暴击伤害', '攻击力%', '生命值%', '防御力%', '穿透率']);
 /** 规范词条名：攻击/生命/防御的值带 % → 加 % 变体；否则走别名归一（吸收 2025「攻击力百分比」等） */
 function canonicalSubName(rawName, value) {
   if ((rawName === '攻击力' || rawName === '生命值' || rawName === '防御力') && String(value ?? '').includes('%')) {
@@ -216,14 +222,15 @@ function canonicalSubName(rawName, value) {
   }
   return normalizeStatKey(rawName);
 }
-/** 规范词条值：percent → ×100 整数。⚠️ 只对**字符串**值 ×100（mys "4.8%" → 480）；
+/** 规范词条值：percent → ×100 整数。判定 = 名字在 PCT_SUBSTATS **或** 字符串以 % 结尾（mys 穿透率 "24%" 曾漏乘，
+ *  因名字归一后不在集合 → 存成 24 而非 2400；以 % 结尾兜底一切百分比字符串，固定值字符串无 % 不受影响）。
  *  数字值视为已是 ×100（mys 异常条目/2025 原样，600 → 600）——与旧 substatRolls 的 typeof 判别一致，
  *  再乘会 double-count（曾把 mys 数字 600 变 60000，roll 2→6）。固定值 → 整数。 */
 function canonicalSubValue(source, name, rawValue) {
   const isStr = typeof rawValue === 'string';
   const n = Number(parseFloat(rawValue));
   if (!Number.isFinite(n)) return rawValue;
-  if (PCT_SUBSTATS.has(name)) return isStr ? Math.round(n * 100) : Math.round(n);
+  if (PCT_SUBSTATS.has(name) || (isStr && /%$/.test(rawValue))) return isStr ? Math.round(n * 100) : Math.round(n);
   return Math.round(n);
 }
 function normalizeStat(source, stat) {

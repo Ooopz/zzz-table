@@ -31,8 +31,7 @@ import { escapeHtml, escapeJsAttr, formatValue } from '../lib/util.js';
 import { richWeb } from './visual.js';
 import { emptyState, richItemHtml, skillIcon, substatRollsMark } from './shared.js';
 import { computeImproveProbs } from './discProb.js';
-import { computeRoleBuildsFromPlans } from '../lib/plansStats.js';
-import { computeBuildBench } from '../lib/buildBench.js';
+import { computeRoleBuildsFromPlans, computeBuildBench } from '../lib/plansStats.js';
 import { buildPanelItems } from '../lib/panelItems.js';
 import { registerChart, chartBox, skillDistOption, panelDistOption, densityScatterOption } from './charts.js';
 import { CHART_HEIGHT } from './visual.js';
@@ -311,7 +310,7 @@ function skillDistChart(g) {
 }
 
 /** 配装对标（右半两条细横条）：音擎 / 套装组合，各「我的 | 推荐 Top1 | 真实玩家 Top1」。
- *  数据层 = lib/buildBench.js（纯函数，我的/推荐/真实玩家三方结构化对照）；此处只拼 HTML。
+ *  数据层 = lib/plansStats.js 的 computeBuildBench（纯函数，我的/推荐/真实玩家三方结构化对照）；此处只拼 HTML。
  *  只并列展示、不做「换」判定——差异由玩家自看；无数据侧渲染「—」。 */
 function renderBuildBenchHtml(g) {
   const planBuilds = computeRoleBuildsFromPlans(plans);

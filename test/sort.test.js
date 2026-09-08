@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSort } from '../src/lib/sort.js';
+import { createSort } from '../src/lib/util.js';
 
 test('toggle 三态：同列升→降→复位，新列从升序', () => {
   const sort = createSort();

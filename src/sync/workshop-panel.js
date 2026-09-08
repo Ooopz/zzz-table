@@ -49,7 +49,7 @@ export const propName = (id) => PROP_DESC[id] || `未知${id}`;
 
 // ---------- 2025 源面板计算（复现工坊 enka_attrs_mapping） ----------
 /** 驱动盘主属性按稀有度的等级成长系数（工坊 relic_calculate） */
-const RARITY_GROWTH = { 4: 0.2, 3: 0.25, 2: 0.3 };
+export const RARITY_GROWTH = { 4: 0.2, 3: 0.25, 2: 0.3 };
 
 function calcBaseTotalValue(ij) {
   const stat = rolebase[String(ij.Id)];

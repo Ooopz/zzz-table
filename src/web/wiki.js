@@ -1,9 +1,8 @@
 // src/web/wiki.js —— 资料视图：五个子面板（角色 / 音擎 / 驱动盘 / 邦布 / 总览）平铺展示
 // （IA 重构：原「统计→全服总览」收编为第五个子面板，内容在 metaOverview.js）
 import { library } from './data.js';
-import { escapeHtml, escapeJsAttr, statEntries, formatValue, isEmptyVal } from '../lib/util.js';
+import { escapeHtml, escapeJsAttr, statEntries, formatValue, isEmptyVal, createSort } from '../lib/util.js';
 import { richWeb } from './visual.js';
-import { createSort } from '../lib/sort.js';
 import { maxLevelStats, panelOrder } from '../lib/calc.js';
 import { STAT, SUBSTAT } from '../lib/constants.js';
 import { richItemHtml, skillIcon, registerZZZ, tableHtml } from './shared.js';
@@ -15,7 +14,7 @@ export function setWikiTab(key) {
   wikiSort.reset(); // 切换子面板时清空排序
 }
 
-// ---------- 表头排序（asc → desc → 恢复默认 三态，统一走 src/lib/sort.js） ----------
+// ---------- 表头排序（asc → desc → 恢复默认 三态，统一走 src/lib/util.js） ----------
 const wikiSort = createSort();
 /** 点击表头切换排序：同列 asc→desc→无；新列从升序开始 */
 export function toggleWikiSort(key) {

@@ -4,7 +4,7 @@
 
 import readline from 'node:readline';
 import { isMain, writeDataFile, openBrowser, pool } from '../lib/node.js';
-import { parseCookies, parseNum, CLIPBOARD_SCRIPT } from '../lib/util.js';
+import { parseCookies, parseNum } from '../lib/util.js';
 import { canonicalize, CATEGORY } from '../lib/names.js';
 import { validateCharacters } from '../lib/schema.js';
 import { requestJson, fetchUid, MHY_UA, MHY_DEVICE } from './mihoyo-api.js';
@@ -93,12 +93,11 @@ function ask(promptText) {
 }
 
 async function fetchCookie() {
-  console.log('\n① 将自动打开米游社登录页，请先登录（登录过会自动跳转）。');
+  console.log('\n① 将自动打开米游社个人主页，请先登录（登录过会自动跳转）。');
   openBrowser('http://user.mihoyo.com/');
-  console.log('② 在打开的页面上按 F12 → 控制台(Console)，粘贴下面这段代码并回车：\n');
-  console.log('   ' + CLIPBOARD_SCRIPT + '\n');
-  console.log('   脚本会把 cookie 复制到剪贴板并弹出确认框。');
-  const text = await ask('③ 请在这里粘贴 cookie 后回车: ');
+  console.log('② 页面打开后按 F12 → Network，刷新/操作几下，点开任意一条发往 *.mihoyo.com 的请求；');
+  console.log('③ 复制该请求 Request Headers → Cookie: 整段值（含 HttpOnly 登录令牌，很长，全部复制）。');
+  const text = await ask('④ 请在这里粘贴复制到的 Cookie: 整段后回车: ');
   if (!text) throw new Error('未输入 cookie');
   return parseCookies(text) || {};
 }

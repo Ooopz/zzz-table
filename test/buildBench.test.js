@@ -1,8 +1,8 @@
-// test/buildBench.test.js —— lib/buildBench 纯函数单测：套装组合推导 + 我的/推荐/真实玩家三方配装对标结构。
+// test/buildBench.test.js —— lib/plansStats 的 mySetCombo/computeBuildBench 纯函数单测：套装组合推导 + 三方配装对标结构。
 // 纯内联 fixture，不依赖 data/，永远不会 SKIP。
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mySetCombo, computeBuildBench } from '../src/lib/buildBench.js';
+import { mySetCombo, computeBuildBench } from '../src/lib/plansStats.js';
 
 const d = (set, n) => Array.from({ length: n }, () => ({ set }));
 
