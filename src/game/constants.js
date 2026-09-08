@@ -292,3 +292,26 @@ const SKILL_LABEL = {
 export const SKILL_TYPES = Object.keys(SKILL_LABEL).map((k) => ({ key: Number(k), label: SKILL_LABEL[k] }));
 /** 官方（米游社账号）与工坊两源（mys/2025）技能 type → canonical（特殊技↔闪避互换；官方 3 终结/连携→4 终结；官方 6 支援→2 支援） */
 export const OFFICIAL_SKILL_TYPE = { 0: 0, 1: 3, 2: 1, 3: 4, 5: 5, 6: 2 };
+
+
+// ---------- 角色固有元数据枚举：属性(element)/职业(trait)/阵营(faction) ----------
+// 随角色更新会新增取值（新元素/新职业/新阵营），运行期对未知值一律**放行**（当前按文本处理）；
+// 一致性由 test/character-meta.test.js 校验现有 data/library.json 兜底——新值出现测试标红，补录后转绿。
+// 图标：仅 属性/职业 各一张小图(assets/img/…，构建内联为 base64)；阵营不落图。
+export const ELEMENT = Object.freeze({
+  电: '电', 冰: '冰', 物理: '物理', 风: '风', 流明: '流明', 火: '火', 以太: '以太',
+  凛刃: '凛刃', 玄墨: '玄墨', 烈霜: '烈霜',
+});
+export const TRAIT = Object.freeze({
+  锋御: '锋御', 强攻: '强攻', 击破: '击破', 支援: '支援', 异常: '异常', 命破: '命破', 防护: '防护',
+});
+export const FACTION = Object.freeze({
+  弗林特工坊: '弗林特工坊', 空域巡戍局: '空域巡戍局', 坎卜斯黑枝: '坎卜斯黑枝', 怪啖屋: '怪啖屋',
+  'H.S.O.S.6': 'H.S.O.S.6', 达识结社: '达识结社', 外务筹策局: '外务筹策局', 法厄同: '法厄同',
+  狡兔屋: '狡兔屋', 都市秩序部: '都市秩序部', 妄想天使: '妄想天使', 云岿山: '云岿山',
+  奥波勒斯小队: '奥波勒斯小队', 反舌鸟: '反舌鸟', '防卫军·白银小队': '防卫军·白银小队', 天琴座: '天琴座',
+  卡吕冬之子: '卡吕冬之子', 刑侦特勤组: '刑侦特勤组', 维多利亚家政: '维多利亚家政', 白祇重工: '白祇重工',
+});
+export const ELEMENT_SET = new Set(Object.values(ELEMENT));
+export const TRAIT_SET = new Set(Object.values(TRAIT));
+export const FACTION_SET = new Set(Object.values(FACTION));
