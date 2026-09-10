@@ -1,7 +1,8 @@
 // 练度规划纯逻辑测试：目标合成（档位×P20 地板）与目标缺口（纯内联 fixture，不依赖 data/）
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { percentileAt, synthTarget, toTargetDisplay, GOAL_FLOOR_Q } from '../src/lib/goalAdvisor.js';
+import { synthTarget, toTargetDisplay, GOAL_FLOOR_Q } from '../src/lib/panelAdvice.js';
+import { percentileAt } from '../src/lib/distStats.js';
 import { setCalcContext, targetGap } from '../src/lib/calc.js';
 
 // 造一个已知分位点的分布：p10=1 p25=2 p50=4 p75=6 p90=8 p95=9 p99=10

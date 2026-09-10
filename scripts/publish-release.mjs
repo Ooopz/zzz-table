@@ -11,7 +11,7 @@ import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync, rmSync, cpSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { slimPlans } from '../src/lib/plansSlim.js';
+import { slimPlans } from '../src/sync/plans.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const REL = join(ROOT, 'release');
@@ -22,7 +22,7 @@ const DATA = join(ROOT, 'data');
 async function buildRelease() {
   console.log('构建 GitHub Pages 部署包 → release/index.html');
 
-  // 1. 数据（plans slim 去 desc/skills，与 server /api/data 共用 src/lib/plansSlim.js）
+  // 1. 数据（plans slim 去 desc/skills，与 server /api/data 共用 src/sync/plans.js 的 slimPlans）
   const data = {
     library: JSON.parse(readFileSync(join(DATA, 'library.json'), 'utf8')),
     plans: slimPlans(JSON.parse(readFileSync(join(DATA, 'plans.json'), 'utf8'))),

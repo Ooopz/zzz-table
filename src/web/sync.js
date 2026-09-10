@@ -1,9 +1,8 @@
 // src/web/sync.js —— 服务器一键同步中心（从 ui.js 拆出，2026-11）
 // 职责：同步弹窗（勾选/新鲜度/cookie/进度轮询）+ 四个同步的请求封装。
 // 入口 initSync() 绑定弹窗按钮（ui.js 的 initUi 调用）；syncWorkshopData 供「工坊更新」快捷入口复用。
-import { escapeHtml } from '../lib/util.js';
+import { escapeHtml, SYNC_KINDS } from '../lib/util.js';
 import { apiRequest, postJSON, notify } from './api.js';
-import { SYNC_KINDS } from '../game/index.js';
 import { isStatic, importCharacters, clearLocalChars, myCharacters } from './data.js';
 import { render } from './render.js';
 

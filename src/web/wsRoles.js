@@ -2,9 +2,9 @@
 // 玩家分布面板、推荐三档统计等按引用失效的缓存（原 statsView.js 内嵌实现抽出，手风琴/总览视图共用）。
 // ⚠️ 单槽哨兵缓存（wsRoleIdMap / recTierStats / wsPanelMap / alignRoleName）全靠 workshopGrad/plans/panels 引用比较失效——搬移时逐字保留其引用守卫语义，勿在 import 期预建（会在 setData() 前冻结而永久陈旧）。
 import { plans, workshopGrad, workshopStats, charIndex, statsMissingData, myCharacters, wengineIndex } from './data.js';
-import { computeRecTierStats } from '../lib/panelBench.js';
+import { computeRecTierStats } from '../lib/plansStats.js';
 import { CHAR_ALIASES, canonicalName, CATEGORY, resolveEntry } from '../lib/names.js';
-import { SKILL_TYPES, OFFICIAL_SKILL_TYPE } from '../game/index.js';
+import { SKILL_TYPES } from '../game/index.js';
 import { emptyState } from './shared.js';
 
 /** 统一空态转发（缺数据源时给对应同步指引） */
@@ -127,7 +127,7 @@ export function skillDistItems(name) {
   return SKILL_TYPES.map((t) => {
     const d = dist[t.key];
     if (!d) return null;
-    const myLv = my.skills.find((s) => OFFICIAL_SKILL_TYPE[s.type] === t.key)?.level;
+    const myLv = my.skills.find((s) => s.type === t.key)?.level;
     // 众数：最高频等级；同数取高级（与 computeSkillLevelModes 的并列取高一致）
     let modeLv = null;
     let best = -1;

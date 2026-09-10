@@ -52,7 +52,7 @@ test('extractBuild mys 源：提取 skills 且主/副词条与 2025 源同构（
   assert.ok(build, 'mys 源应提取成功');
   assert.deepEqual(build.skills, [
     { type: 0, level: 15 },
-    { type: 1, level: 15 },
+    { type: 3, level: 15 }, // skill_type=1 特殊技 → canonical 3（落盘归一）
     { type: 5, level: 7 },
   ]);
   assert.equal(build.level, 60);
@@ -72,7 +72,7 @@ test('extractBuild mys 源：提取 skills 且主/副词条与 2025 源同构（
   assert.equal('valid' in build.equips[0].subs[0], false, 'valid 标记不应提取（非两源共有）');
 });
 
-test('extractBuild 2025 源：提取 skills（SkillLevelList Index → type）', () => {
+test('extractBuild 2025 源：提取 skills（SkillLevelList Index 官方编号 → canonical）', () => {
   const v3 = {
     data: {
       roles: [
@@ -116,7 +116,7 @@ test('extractBuild 2025 源：提取 skills（SkillLevelList Index → type）',
   assert.ok(build, '2025 源应提取成功');
   assert.deepEqual(build.skills, [
     { type: 0, level: 12 },
-    { type: 1, level: 12 },
+    { type: 3, level: 12 }, // Index=1 特殊技 → canonical 3（落盘归一）
     { type: 5, level: 7 },
   ]);
   assert.equal(build.weapon.name, '云霓孤光');

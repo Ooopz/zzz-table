@@ -1,4 +1,5 @@
 // src/sync/plans.js —— 抓取米游社「养成指南」推荐方案 → data/plans.json（{ avatarId: { name, plans: [...] } }）
+// 载荷瘦身契约（PLAN_DROP_FIELDS/slimPlans）在本文件尾部：server /api/data 与 publish-release 静态构建共用，改剥离集只改这一处。
 // 运行: npm run sync:plans（--account 只抓账号已练角色）；数据源 nap_cultivate_tool 的 user/feed（翻页到 end 全量爬取，MAX_PLANS=5000 防死循环）+ avatar_simple_info/plan_detail 补齐
 // ⚠️ 请求头必须带 x-rpc-device_id / x-rpc-device_fp 指纹头，否则触发 Geetest 风控（retcode 10035）；
 //   设备头优先取 cookie 真实指纹（DEVICEFP / _MHYUUID），伪造指纹会被 retcode 10041 拒绝（实测）。feed 端点域 act-api-takumi.mihoyo.com，参数用下划线
@@ -11,7 +12,6 @@ import { normalizeStatKey, substatName, parseNum } from '../lib/util.js';
 import { canonicalize, CATEGORY } from '../lib/names.js';
 import { PERCENT_STATS, mainStatName } from '../game/index.js';
 import { validatePlans } from '../lib/schema.js';
-import { slimPlans } from '../lib/plansSlim.js';
 import { requestJson, retry, fetchUid, MHY_UA, MHY_DEVICE } from './mihoyo-api.js';
 import { loadNameIndexes } from './name-index.js';
 
@@ -243,6 +243,25 @@ async function main() {
   console.log(`\n完成！uid ${uid}，共 ${stats.characters} 角色、${stats.plans} 个方案。`);
   console.log('  data/plans.json 已生成');
   return { uid, stats };
+}
+
+// ---------- 载荷瘦身契约（2026-09 自 lib/plansSlim.js 并入） ----------
+// desc 是大段攻略正文，占体积一多半，剥离后 /api/data 负载显著变小；skills 是另一大头。
+export const PLAN_DROP_FIELDS = ['desc', 'skills'];
+
+export function slimPlans(plans) {
+  const out = {};
+  for (const [id, v] of Object.entries(plans || {})) {
+    out[id] = {
+      ...v,
+      plans: (v.plans || []).map((p) => {
+        const q = { ...p };
+        for (const f of PLAN_DROP_FIELDS) delete q[f];
+        return q;
+      }),
+    };
+  }
+  return out;
 }
 
 isMain(import.meta, () => main());

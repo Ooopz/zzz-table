@@ -1,8 +1,8 @@
-// test/panelItems.test.js —— lib/panelItems 纯函数单测：手风琴「面板分布」整合图的组合项。
+// test/panelItems.test.js —— lib/panelAdvice.buildPanelItems 纯函数单测（原 panelItems.js，2026-09 并入）：手风琴「面板分布」整合图的组合项。
 // 纯内联 fixture，不依赖 data/，永远不会 SKIP。
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPanelItems } from '../src/lib/panelItems.js';
+import { buildPanelItems } from '../src/lib/panelAdvice.js';
 
 // dist / rec / myFinal fixture（与 workshop-stats/plans/characters 同构）
 const dist = {

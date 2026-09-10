@@ -121,8 +121,11 @@ export function isEmptyVal(v) {
 }
 
 // ---------- 属性名归一化 ----------
-/** 属性名别名 → 规范名（wiki 各角色用词不一；命破角色的专属名映射见下） */
-const STAT_ALIASES = {
+/** 属性名别名 → 规范名（wiki 各角色用词不一；命破角色的专属名映射见下）。
+ *  ⚠️ 惰性初始化：util 与 game 相互成环（game/disc.js 取 statEntries），本模块顶层解引用 STAT 会按模块求值顺序 TDZ——
+ *  首次调用才取值（运行期环已解开）；util 顶层不得解引用 game 符号。 */
+let STAT_ALIASES = null;
+const statAliases = () => (STAT_ALIASES ??= {
   生命: STAT.HP,
   生命力: STAT.HP,
   生命指: STAT.HP, // wiki 邦布页面笔误（幽浮布初始面板把「生命值」写成「生命指」）
@@ -163,10 +166,10 @@ const STAT_ALIASES = {
   电伤加成百分比: '电属性伤害加成',
   以太加伤百分比: '以太伤害加成',
   风伤加成百分比: '风属性伤害加成',
-};
+});
 /** 单个属性名归一化为规范名（未知名原样返回） */
 export function normalizeStatKey(k) {
-  return STAT_ALIASES[k] || k;
+  return statAliases()[k] || k;
 }
 
 /** 词条名归一：把「百分比」写法转成 % 变体（攻击力百分比 → 攻击力%）；其余原样返回。
@@ -261,3 +264,12 @@ export function createSort() {
     },
   };
 }
+
+// ---------- 共享枚举（双端词表） ----------
+/** 同步类型（server 的 syncState.kind + 前端进度轮询）。2026-09 自 game 迁出后再并入 util——双端词表无独立文件必要 */
+export const SYNC_KINDS = Object.freeze({
+  LIBRARY: 'library',
+  CHARACTERS: 'characters',
+  PLANS: 'plans',
+  WORKSHOP: 'workshop',
+});

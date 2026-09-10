@@ -1,9 +1,9 @@
 // src/lib/names.js —— 名称解析算法（通用：跨源变体名 → 标准名）。
-// 实体词表(CATEGORY / 别名 / 归一化键策略)已迁至 src/game/entityNames.js（names 的**非函数**部分）；
+// 实体词表(CATEGORY / 别名 / 归一化键策略)住 src/game/index.js（跨实体件；names 的**非函数**部分）；
 // 本模块只保留解析/查找逻辑，数据从 game 取；为兼容旧 import 仍 re-export CATEGORY/别名（权威在 game）。
 // 双端共用，禁止 import 任何 node: 模块。
 import { normalize } from './util.js';
-import { CATEGORY, CATEGORY_KEY, ALIASES, CHAR_ALIASES, DISC_ALIASES } from '../game/entityNames.js';
+import { CATEGORY, CATEGORY_KEY, ALIASES, CHAR_ALIASES, DISC_ALIASES } from '../game/index.js';
 export { CATEGORY, CHAR_ALIASES, DISC_ALIASES };
 
 /**

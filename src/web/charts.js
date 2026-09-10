@@ -257,7 +257,7 @@ export function densityScatterOption(grid, mine = null) {
  *  **X 轴 = 玩家分位（0-100%）**——密度/我的点/目标点/推荐区间全部按直方图累计分位定位（lib/distStats.histCumPct），
  *  上下多属性行横向可比（同一分位对齐）；悬浮/读数线仍显示属性值（histPctValue 反查）。
  *  推荐带 = [中档中位数, 高档最大值(high.median+high.sd)] 映射到分位（目标要够高）。
- *  items = lib/panelItems.buildPanelItems 输出（[{attr, dist, low/mid/high:{median,sd}, mine, minePct, target, targetPct}]）。 */
+ *  items = lib/panelAdvice.buildPanelItems 输出（[{attr, dist, low/mid/high:{median,sd}, mine, minePct, target, targetPct}]）。 */
 export function panelDistOption(items) {
   const n = items.length;
   if (!n) return {};

@@ -7,9 +7,9 @@ import {
   MAIN_STAT_OPTIONS,
   SUBSTAT_TYPE_SET,
   mainStatName,
-  VIEWS,
   EFFECTIVE_SUBSTAT_OPTIONS,
 } from '../game/index.js';
+import { VIEWS } from './views.js';
 import { notify } from './api.js';
 import {
   readCharTarget,

@@ -3,80 +3,17 @@
 // 4 件套条件效果与音擎被动不计入（与「推算未计 4 件套条件效果」口径一致），2 件套按 4+2 配装实际生效计入。
 
 import { resolveEntry, CATEGORY } from './names.js';
-import { panelBonus, coreSkillBoostAt, substatGrowthTable, accumulateBonus } from './calc.js';
-import { PANEL_ORDER, STAT, SUBSTAT } from '../game/index.js';
+import { panelBonus, coreSkillBoostAt, accumulateBonus } from './calc.js';
+import {
+  PANEL_ORDER,
+  STAT,
+  DISC_MAIN_STAT_S,
+  SUBSTAT_SOURCES,
+  mainStatName,
+  mainStatForPanel,
+  mainTypeForSlot,
+} from '../game/index.js';
 import { statEntries, pierceStat } from './util.js';
-
-const S = substatGrowthTable.S;
-
-/** S 级满级驱动盘主词条数值（456 号位的百分比/特殊词条均为内部小数口径） */
-const MAIN_STAT_S = {
-  1: { [STAT.HP]: 2200 },
-  2: { [STAT.ATK]: 316 },
-  3: { [STAT.DEF]: 184 },
-  4: {
-    [SUBSTAT.HP_PCT]: 0.3,
-    [SUBSTAT.ATK_PCT]: 0.3,
-    [SUBSTAT.DEF_PCT]: 0.48,
-    [STAT.ANOMALY_PROF]: 92,
-    [STAT.CR]: 0.24,
-    [STAT.CD]: 0.48,
-  },
-  5: {
-    [SUBSTAT.HP_PCT]: 0.3,
-    [SUBSTAT.ATK_PCT]: 0.3,
-    [SUBSTAT.DEF_PCT]: 0.48,
-    [STAT.PEN_RATE]: 0.24,
-    物理伤害加成: 0.3,
-    火属性伤害加成: 0.3,
-    冰属性伤害加成: 0.3,
-    电属性伤害加成: 0.3,
-    以太伤害加成: 0.3,
-    风属性伤害加成: 0.3,
-  },
-  6: {
-    [SUBSTAT.HP_PCT]: 0.3,
-    [SUBSTAT.ATK_PCT]: 0.3,
-    [SUBSTAT.DEF_PCT]: 0.48,
-    [STAT.IMPACT]: 0.18,
-    [STAT.ANOMALY_CTRL]: 0.3,
-    [STAT.ENERGY]: 0.6,
-  },
-};
-
-/** 面板属性 -> 能影响它的副词条类型。攻击/生命/防御有 % 与固定值两种形态。 */
-const SUBSTAT_SOURCES = {
-  [STAT.ATK]: [
-    { type: SUBSTAT.ATK_PCT, kind: 'pct', stat: STAT.ATK, value: S[SUBSTAT.ATK_PCT] },
-    { type: SUBSTAT.ATK, kind: 'flat', stat: STAT.ATK, value: S[SUBSTAT.ATK] },
-  ],
-  [STAT.HP]: [
-    { type: SUBSTAT.HP_PCT, kind: 'pct', stat: STAT.HP, value: S[SUBSTAT.HP_PCT] },
-    { type: SUBSTAT.HP, kind: 'flat', stat: STAT.HP, value: S[SUBSTAT.HP] },
-  ],
-  [STAT.DEF]: [
-    { type: SUBSTAT.DEF_PCT, kind: 'pct', stat: STAT.DEF, value: S[SUBSTAT.DEF_PCT] },
-    { type: SUBSTAT.DEF, kind: 'flat', stat: STAT.DEF, value: S[SUBSTAT.DEF] },
-  ],
-  [STAT.CR]: [{ type: STAT.CR, kind: 'add', stat: STAT.CR, value: S[STAT.CR] }],
-  [STAT.CD]: [{ type: STAT.CD, kind: 'add', stat: STAT.CD, value: S[STAT.CD] }],
-  [STAT.ANOMALY_PROF]: [{ type: STAT.ANOMALY_PROF, kind: 'add', stat: STAT.ANOMALY_PROF, value: S[STAT.ANOMALY_PROF] }],
-  [STAT.PEN_VALUE]: [{ type: STAT.PEN_VALUE, kind: 'add', stat: STAT.PEN_VALUE, value: S[STAT.PEN_VALUE] }],
-};
-
-/** 主词条 UI 名 -> 面板属性名（456 的 攻击力%/生命值%/防御力% 累加到对应面板属性乘区）。 */
-function mainStatForPanel(name) {
-  if (name === SUBSTAT.ATK_PCT) return STAT.ATK;
-  if (name === SUBSTAT.HP_PCT) return STAT.HP;
-  if (name === SUBSTAT.DEF_PCT) return STAT.DEF;
-  return name;
-}
-function canonMain(name) {
-  if (name === STAT.ATK) return SUBSTAT.ATK_PCT;
-  if (name === STAT.HP) return SUBSTAT.HP_PCT;
-  if (name === STAT.DEF) return SUBSTAT.DEF_PCT;
-  return name;
-}
 
 /** 固定面板（角色满级基础 + 音擎 + 456 主词条，不含 2 件套与副词条）。 */
 function fixedPanel(libChar, libWengine, mains) {
@@ -116,9 +53,9 @@ function fixedPanel(libChar, libWengine, mains) {
   ];
   for (const { slot, name } of slots) {
     if (!name) continue;
-    const table = MAIN_STAT_S[slot] || {};
-    const value = table[canonMain(name)] ?? table[name];
-    if (value != null) accumulate(mainStatForPanel(canonMain(name)), value);
+    const table = DISC_MAIN_STAT_S[slot] || {};
+    const value = table[mainStatName(name)] ?? table[name];
+    if (value != null) accumulate(mainStatForPanel(mainStatName(name)), value);
   }
 
   const final = {};
@@ -260,13 +197,6 @@ function combineDiscOptions(optionsBySlot) {
   return states;
 }
 
-/** 槽位主词条 -> 对应副词条类型（用于「副词条不与主词条重复」约束）。 */
-function mainTypeForSlot(slot, mains) {
-  if (slot === 1) return STAT.HP;
-  if (slot === 2) return STAT.ATK;
-  if (slot === 3) return STAT.DEF;
-  return canonMain(mains[slot]) || '';
-}
 /** 解析一次配装，返回固定面板与主词条（2D/3D 共用）。 */
 function resolveBuild(ctx, opts) {
   const { charIndex, wengineIndex, discIndex } = ctx;
@@ -280,7 +210,7 @@ function resolveBuild(ctx, opts) {
   };
   addSet(opts.set2);
   addSet(opts.set4);
-  const mains = { 4: canonMain(opts.main4), 5: canonMain(opts.main5), 6: canonMain(opts.main6) };
+  const mains = { 4: mainStatName(opts.main4), 5: mainStatName(opts.main5), 6: mainStatName(opts.main6) };
   const fixed = fixedPanel(libChar, libWengine, mains);
   const withSets = fixedPanelWithSets(fixed, libChar, setBonuses);
   return { libChar, libWengine, withSets, mains };

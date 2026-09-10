@@ -2,7 +2,8 @@
 import { statEntries, escapeHtml } from '../lib/util.js';
 import { buildNameIndex, canonicalize, CATEGORY } from '../lib/names.js';
 import { Character, Wengine, Disc, toInstances } from '../game/index.js';
-import { SUBSTAT_TYPE_SET, TARGET_KEYS, LEGACY_VIEW_MAP } from '../game/index.js';
+import { SUBSTAT_TYPE_SET, TARGET_KEYS } from '../game/index.js';
+import { LEGACY_VIEW_MAP } from './views.js';
 import { apiRequest, postJSON, notify } from './api.js';
 
 // ---------- 数据（由 setData 注入） ----------

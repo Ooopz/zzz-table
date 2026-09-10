@@ -1,5 +1,8 @@
-// src/lib/plansStats.js —— 从 plans.json 统计每角色 Top 音擎 / 驱动盘套装（结构与 workshop-grad 一致），纯函数（Node 与浏览器共用）
-// 用途：角色面板「角色配装对标」卡片里与 workshop-grad（全服实况）并排对比「方案推荐」侧数据，并分析差异。
+// src/lib/plansStats.js —— plans.json 对标统计：每角色 Top 音擎/驱动盘套装 + 推荐方案三档（low/mid/high）统计，纯函数（Node 与浏览器共用）
+// 用途：角色面板「角色配装对标」卡片里与 workshop-grad（全服实况）并排对比「方案推荐」侧数据，并分析差异；
+//       三档统计（computeRecTierStats）供 wsRoles.js → goalView/metaOverview，并作为目标合成 synthTarget 的 tierStat 输入。
+// （2026-09 并入 panelBench.js——同源 plans.json 的统计函数一家。）
+import { sd, median, cv, quantileSorted } from './distStats.js';
 
 /** 组合内套装件数（num/cnt 字段兼容） */
 const setCount = (s) => Number(s?.num ?? s?.cnt ?? 0);
@@ -101,4 +104,66 @@ export function computeBuildBench({ my, planBuild, gradRole }) {
       live: gradRelics.map((r) => ({ name: r.name, sets: r.sets, percent: r.percent })),
     },
   };
+}
+
+// ---------- 推荐方案三档统计（原 panelBench.js，2026-09 并入） ----------
+
+/** 一档值的统计：MAD 排除离群（哨兵值/异常方案）后算 mean/median/sd/cv；排除后样本 <3 视为该档不可靠返回 null */
+function tierStat(vals) {
+  if (!vals.length) return null;
+  const s = [...vals].sort((a, b) => a - b);
+  const m = quantileSorted(s, 0.5); // s 已排序 → 直接取分位，别再让 median() 内部重新拷贝排序
+  // MAD（中位数绝对偏差）离群排除：|v-median| > 3×1.4826×MAD 视为离群（对偏态稳健，可排除哨兵如生命 100000/攻击 10000）
+  const absDev = s.map((v) => Math.abs(v - m)); // 不单调，未排序 → 交给 median() 排序
+  const mad = median(absDev) * 1.4826;
+  const threshold = mad ? 3 * mad : Infinity;
+  const clean = s.filter((v) => Math.abs(v - m) <= threshold);
+  if (clean.length < 3) return null;
+  const mean = clean.reduce((a, v) => a + v, 0) / clean.length;
+  const sdv = sd(clean, mean);
+  return {
+    count: clean.length,
+    mean,
+    median: quantileSorted(clean, 0.5),
+    sd: sdv,
+    cv: cv(clean, mean),
+    outliers: s.length - clean.length,
+  };
+}
+
+/**
+ * 推荐三档统计：每角色每属性 low/mid/high 的 mean/median/sd/CV。
+ * 过滤 low=mid=0 的占位属性（冲击力/异常掌控等方案里只有 high 有值或无值，三档统计无意义）→ low/mid 置 null。
+ * cv 用于「共识度」（推荐体系指标）。
+ */
+export function computeRecTierStats(plans) {
+  const acc = {}; // 角色名 -> {属性: {low:[], mid:[], high:[]}}
+  for (const v of Object.values(plans || {})) {
+    if (!v || !v.name) continue;
+    const byAttr = (acc[v.name] ??= {});
+    for (const p of v.plans || []) {
+      for (const q of p.panel || []) {
+        if (!q || q.name == null) continue;
+        const t = (byAttr[q.name] ??= { low: [], mid: [], high: [] });
+        if (q.low != null) t.low.push(q.low);
+        if (q.mid != null) t.mid.push(q.mid);
+        if (q.high != null) t.high.push(q.high);
+      }
+    }
+  }
+  const out = {};
+  for (const [name, byAttr] of Object.entries(acc)) {
+    out[name] = {};
+    for (const [attr, tiers] of Object.entries(byAttr)) {
+      const low = tierStat(tiers.low);
+      const mid = tierStat(tiers.mid);
+      const high = tierStat(tiers.high);
+      if (low && low.median === 0 && mid && mid.median === 0) {
+        out[name][attr] = { low: null, mid: null, high };
+      } else {
+        out[name][attr] = { low, mid, high };
+      }
+    }
+  }
+  return out;
 }

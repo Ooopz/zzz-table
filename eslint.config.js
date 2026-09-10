@@ -29,6 +29,25 @@ export default [
     },
   },
   {
+    // src/game 单一出口约定：game 外部只准 import game/index.js（barrel），禁止直连内部文件；
+    // game 目录内部互引不受限（本规则块的 files 不含 src/game）。
+    files: ['server.js', 'src/lib/**/*.js', 'src/web/**/*.js', 'src/sync/**/*.js', 'scripts/**/*.js', 'scripts/**/*.mjs', 'test/**/*.js'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              // 命中 …/game/ 或 game 包内除 index.js 外的任何路径（如 ../game/stats.js、./src/game/models.js）
+              regex: '(^|/)game(/(?!index\\.js$)|$)',
+              message: 'src/game 消费端只准 import game/index.js（barrel 单一出口）。',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // 浏览器端前端模块
     files: ['src/web/**/*.js'],
     languageOptions: { globals: globals.browser },

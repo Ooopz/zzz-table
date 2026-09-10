@@ -98,7 +98,7 @@ test('extractCharacter 提取技能等级与标题', () => {
   assert.ok(Array.isArray(c.skills) && c.skills.length > 0, '应有技能列表');
   const types = c.skills.map((s) => s.type);
   assert.ok(types.includes(0), '应含普攻(skill_type=0)');
-  assert.ok(types.includes(1), '应含特殊技(skill_type=1)');
+  assert.ok(types.includes(3), '特殊技(skill_type=1) 落盘归一为 canonical 3');
   for (const s of c.skills) {
     assert.equal(typeof s.level, 'number', '技能应有等级');
     assert.ok(Array.isArray(s.items) && s.items.length > 0, '技能应有条目');

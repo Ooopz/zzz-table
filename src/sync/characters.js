@@ -14,6 +14,11 @@ import { loadNameIndexes } from './name-index.js';
 import { cacheCookies, readCookieCache } from '../lib/nodeUtil.js';
 export { cacheCookies, readCookieCache };
 
+// 官方（米游社账号）技能 type → canonical（游戏 2.0 槽序：0普攻 1闪避 2支援 3特殊 4终结 5核心）。
+// 落盘前归一：data 里技能 type 一律 canonical（与 library.json 同词汇），读取侧不再按源分叉。
+// ⚠️ 与 workshop.js 各留一份（仿 collect.js↔mihoyo-api.js 自包含先例），改任一处必须同步另一处（test/official-skill-type.test.js 对账）。
+export const OFFICIAL_SKILL_TYPE = Object.freeze({ 0: 0, 1: 3, 2: 1, 3: 4, 5: 5, 6: 2 }); // 官方语义：0普攻 1特殊技 2闪避 3连携 5核心被动 6支援（无 4）
+
 // ---------- 名称权威（写时归一） ----------
 // library.json 为标准名权威源；缺失/损坏时降级为不归一（名称保持接口原样），并在同步时提示。
 const libNameIndex = loadNameIndexes('账号音擎/驱动盘名');
@@ -213,7 +218,7 @@ export function extractCharacter(response) {
       })),
     },
     skills: (a.skills || []).map((s) => ({
-      type: s.skill_type, // 0普攻 1特殊技 2闪避 3连携 5核心被动 6支援
+      type: OFFICIAL_SKILL_TYPE[s.skill_type] ?? s.skill_type, // 官方 type → canonical（落盘即规范）
       level: s.level,
       items: (s.items || []).map((it) => ({
         title: it.title || '',

@@ -1,9 +1,9 @@
 // src/web/goalView.js —— 练度面板内容库（「提升」手风琴，嵌入我的角色·汇总表角色行下方）：
 // 顶部驱动盘详情卡：六件盘精简盘面 + 每盘重刷概率三口径——prob 完整口径（含位置 1/6 与主词条概率）、
 //   p4/p3 = 不考虑位置概率、初始 4/3 词条盘的纯条件概率（discRules.computePosProb 直出）；最值得重刷的盘高亮；
-// ① 目标建议：方案高档 × 玩家样本分位合成（lib/goalAdvisor.synthTarget，P20 地板只托底不封顶），
+// ① 目标建议：方案高档 × 玩家样本分位合成（lib/panelAdvice.synthTarget，P20 地板只托底不封顶），
 //   一键应用写回 charTargets，附「词条缺口」列（同类型 %/固定值合并取 max，不可补的标「不可补」）。
-// （原 ② 提升规划/补齐路线区块已下线；lib/goalAdvisor 的 rebuildPlan/slotPlans/mergeGapByType 一并删除。）
+// （原 ② 提升规划/补齐路线区块已下线；lib/panelAdvice 的 rebuildPlan/slotPlans/mergeGapByType 一并删除。）
 import {
   myCharacters,
   plans,
@@ -23,16 +23,15 @@ import {
   findLibraryWengine,
   roleIdFor,
 } from './wsRoles.js';
-import { synthTarget, toTargetDisplay } from '../lib/goalAdvisor.js';
+import { synthTarget, toTargetDisplay, buildPanelItems } from '../lib/panelAdvice.js';
 import { resolveStatCurrent, targetGap, attrsOfTypes, percentSubstats } from '../lib/calc.js';
-import { PANEL_ORDER, SKILL_TYPES, OFFICIAL_SKILL_TYPE, TARGET_PERCENTS } from '../game/index.js';
+import { PANEL_ORDER, SKILL_TYPES, TARGET_PERCENTS } from '../game/index.js';
 import { resolveEntry, CATEGORY } from '../lib/names.js';
 import { escapeHtml, escapeJsAttr, formatValue } from '../lib/util.js';
 import { richWeb } from './visual.js';
 import { emptyState, richItemHtml, skillIcon, substatRollsMark } from './shared.js';
 import { computeImproveProbs } from './discProb.js';
 import { computeRoleBuildsFromPlans, computeBuildBench } from '../lib/plansStats.js';
-import { buildPanelItems } from '../lib/panelItems.js';
 import { registerChart, chartBox, skillDistOption, panelDistOption, densityScatterOption } from './charts.js';
 import { CHART_HEIGHT } from './visual.js';
 
@@ -198,13 +197,13 @@ function roleDetailStripHtml(g) {
   const my = g.my;
   const hasAcc = !!my;
   // 技能养成（技能信息 + 目标等级结合）：图标 + 当前Lv/目标(玩家众数) + 达标 ✓（进度条与差 N 级徽章已删）
-  // canonical 顺序（普攻/闪避/支援/特殊/终结/核心）；账号技能为官方 type，经 OFFICIAL_SKILL_TYPE 映射
-  // ⚠️ 图标用 skillIcon(图标键)：skillIconForType 期待官方 type（1特殊/2闪避），直接传 canonical 会错位（曾致图标乱）
+  // canonical 顺序（普攻/闪避/支援/特殊/终结/核心）；账号技能 type 已在 sync 落盘前归一 canonical，直接按 t.key 对齐
+  // （图标走 skillIcon(SKILL_ICON_KEY[t.key])，与账号 type 词汇无关）
   // 未拥有角色：hasAcc=false → 无账号技能，当前等级全 —，目标(全服众数)照常给
   const SKILL_ICON_KEY = { 0: 'normal', 1: 'dodge', 2: 'support', 3: 'special', 4: 'ultimate', 5: 'core' };
   const modes = g.skillInfo?.modes;
   const skillsHtml = SKILL_TYPES.map((t) => {
-    const s = hasAcc ? (my.skills || []).find((x) => OFFICIAL_SKILL_TYPE[x.type] === t.key) : null;
+    const s = hasAcc ? (my.skills || []).find((x) => x.type === t.key) : null;
     if (hasAcc && !s) return '';
     const cur = s?.level ?? null;
     const mode = modes?.[t.key];
@@ -369,7 +368,7 @@ export function setPanelDistScope(scope) {
 }
 
 /** 手风琴底部「玩家分布 × 推荐三档」整合图：横向箱线 + 三档 median 点位 + 我的菱形标记，每属性一行独立刻度。
- *  数据走 lib/panelItems.buildPanelItems（与诊断两图同源）；默认只看有效属性，勾选集为空回退全量。 */
+ *  数据走 lib/panelAdvice.buildPanelItems（与诊断两图同源）；默认只看有效属性，勾选集为空回退全量。 */
 function renderPanelDistHtml(g) {
   // 已设目标（user-config 整数口径 → 内部值）：面板分布图目标标记用（只标已设目标，未设不标；特殊键非数值自动跳过）
   const targets = {};

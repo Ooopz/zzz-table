@@ -344,7 +344,7 @@ test('computePanelScatter：每角色/全体 2D 密度网格（攻击归一、�
 // ---------- 新指标聚合 ----------
 
 const NEW_META_ENTRIES = [
-  // 角色 1011：2 条（rank 0 / rank 6），技能与评分各异（source 显式声明，type 按 2025 语义：0普攻/1闪避）
+  // 角色 1011：2 条（rank 0 / rank 6），技能与评分各异（source 显式声明，type 为 canonical：0普攻/1闪避）
   {
     uid: 'u1',
     role_id: '1011',
@@ -434,56 +434,34 @@ test('computeSkillStats：每角色×技能类型的等级分布', () => {
   assert.ok(out['1011']);
   assert.equal(out['1011'][0].count, 2);
   assert.equal(out['1011'][0].median, 10.5, 'lightDist 分位与 computeDist 统一：排序 [9,12] 线性插值 = 10.5');
-  assert.equal(out['1011'][3].median, 9.5, 'type1 经官方映射 → canonical 3（特殊）：排序 [7,12] 线性插值 = 9.5');
+  assert.equal(out['1011'][1].median, 9.5, 'type1 闪避：排序 [7,12] 线性插值 = 9.5');
   assert.equal(out['1031'][0].count, 1);
   assert.equal(out['1031'][0].mean, 10);
 });
 
-test('computeSkillStats：mys 源按官方语义归一化（1特殊技→3、2闪避→1、3终结→4、6支援→2）', () => {
+test('computeSkillStats：canonical type 直入（词汇中立不做映射）', () => {
+  // 2026-09 起官方→canonical 归一已前移到 sync 写入侧（sync/characters.js、workshop.js 各持映射副本，
+  // 对账见 test/official-skill-type.test.js）；2026-08「1↔2 误映射」回归由彼处兜底，聚合侧零映射。
   const out = computeSkillStats([
     {
       role_id: '1011',
       source: 'mys',
       skills: [
-        { type: 0, level: 12 }, // 普攻 → 0
-        { type: 1, level: 11 }, // 特殊技 → 3
-        { type: 2, level: 10 }, // 闪避 → 1
-        { type: 3, level: 9 }, // 终结+连携 → 4
-        { type: 5, level: 7 }, // 核心 → 5
-        { type: 6, level: 8 }, // 支援技 → 2
+        { type: 0, level: 12 }, // 普攻
+        { type: 3, level: 11 }, // 特殊
+        { type: 1, level: 10 }, // 闪避
+        { type: 4, level: 9 }, // 终结/连携
+        { type: 5, level: 7 }, // 核心
+        { type: 2, level: 8 }, // 支援
       ],
     },
   ]);
   const d = out['1011'];
   assert.equal(d[0].median, 12, '普攻');
-  assert.equal(d[1].median, 10, 'mys type2 闪避 → canonical 1');
-  assert.equal(d[2].median, 8, 'mys type6 支援 → canonical 2');
-  assert.equal(d[3].median, 11, 'mys type1 特殊技 → canonical 3');
-  assert.equal(d[4].median, 9, 'mys type3 终结/连携 → canonical 4');
-  assert.equal(d[5].median, 7, '核心');
-});
-
-test('computeSkillStats：2025 源与官方同编号（回归：曾按「1.x 技能 ID」误映射 1↔2 互换）', () => {
-  const out = computeSkillStats([
-    {
-      role_id: '1011',
-      source: '2025',
-      skills: [
-        { type: 0, level: 12 }, // 普攻 → 0
-        { type: 1, level: 11 }, // 特殊技 → 3
-        { type: 2, level: 10 }, // 闪避 → 1
-        { type: 3, level: 9 }, // 终结 → 4
-        { type: 5, level: 7 }, // 核心 → 5
-        { type: 6, level: 8 }, // 支援 → 2
-      ],
-    },
-  ]);
-  const d = out['1011'];
-  assert.equal(d[0].median, 12, '普攻');
-  assert.equal(d[1].median, 10, '2025 type2 闪避 → canonical 1');
-  assert.equal(d[2].median, 8, '2025 type6 支援 → canonical 2');
-  assert.equal(d[3].median, 11, '2025 type1 特殊技 → canonical 3');
-  assert.equal(d[4].median, 9, '2025 type3 终结 → canonical 4');
+  assert.equal(d[1].median, 10, '闪避');
+  assert.equal(d[2].median, 8, '支援');
+  assert.equal(d[3].median, 11, '特殊技');
+  assert.equal(d[4].median, 9, '终结/连携');
   assert.equal(d[5].median, 7, '核心');
 });
 
@@ -491,20 +469,20 @@ test('computeSkillStats：无法判源条目同样计入（技能统计已不依
   const out = computeSkillStats([
     {
       role_id: '1011',
-      // 旧数据无 source：数组按 UI 顺序 [0,2,6,...]
+      // 旧数据无 source（type 落盘已 canonical）：数组按 UI 顺序 [0,1,2,...]
       skills: [
         { type: 0, level: 12 },
-        { type: 2, level: 10 },
-        { type: 6, level: 8 },
+        { type: 1, level: 10 },
+        { type: 2, level: 8 },
       ],
     },
     {
       role_id: '1021',
-      // 旧数据无 source：数组按 ID 顺序 [0,1,2,...]
+      // 旧数据无 source：数组按 ID 顺序 [0,3,2,...]
       skills: [
         { type: 0, level: 12 },
-        { type: 1, level: 11 },
-        { type: 6, level: 8 },
+        { type: 3, level: 11 },
+        { type: 2, level: 8 },
       ],
     },
     {
@@ -514,10 +492,10 @@ test('computeSkillStats：无法判源条目同样计入（技能统计已不依
     },
   ]);
   assert.equal(out['1011'][0].median, 12, '无 source 条目正常计入');
-  assert.equal(out['1011'][1].median, 10, 'type2 闪避 → canonical 1');
-  assert.equal(out['1011'][2].median, 8, 'type6 支援 → canonical 2');
-  assert.equal(out['1021'][3].median, 11, 'type1 特殊技 → canonical 3');
-  assert.equal(out['1021'][2].median, 8, 'type6 支援 → canonical 2');
+  assert.equal(out['1011'][1].median, 10, 'type1 闪避');
+  assert.equal(out['1011'][2].median, 8, 'type2 支援');
+  assert.equal(out['1021'][3].median, 11, 'type3 特殊技');
+  assert.equal(out['1021'][2].median, 8, 'type2 支援');
   assert.equal(out['1031'][0].count, 1, '无法判源条目不再被跳过');
 });
 
@@ -741,25 +719,25 @@ test('computeAllWorkshopStats：单遍历结果与逐个公开函数逐位相等
   eq(all.skillLevelModes, computeSkillLevelModes(entries), 'skillLevelModes');
 });
 
-test('computeSkillLevelModes：每技能等级众数（两源同用官方 type、并列取更高、脏条目跳过）', () => {
-  // 官方 type（1=特殊、2=闪避、3=终结）经 OFFICIAL_SKILL_TYPE 映射 → canonical（3、1、4）；
-  // 2026-08 验证：2025 源与官方同编号，不再按源分表
+test('computeSkillLevelModes：每技能等级众数（落盘已 canonical、并列取更高、脏条目跳过）', () => {
+  // 2026-09 起技能 type 在 sync 写入侧归一（sync/characters.js、workshop.js），聚合只见 canonical
+  //（0普攻 1闪避 2支援 3特殊 4终结 5核心）；词汇中立，不做任何映射
   const modes = computeSkillLevelModes([
     {
       role_id: '1011',
       source: 'mys',
       skills: [
         { type: 0, level: 12 },
-        { type: 1, level: 11 },
-        { type: 1, level: 12 },
+        { type: 3, level: 11 },
+        { type: 3, level: 12 },
       ],
     },
     {
       role_id: '1011',
       source: 'mys',
       skills: [
-        { type: 1, level: 12 },
-        { type: 3, level: 9 },
+        { type: 3, level: 12 },
+        { type: 4, level: 9 },
       ],
     },
     { role_id: '1033', source: 'mys', skills: [{ type: 0, level: 0 }] }, // 非正等级跳过
@@ -769,21 +747,21 @@ test('computeSkillLevelModes：每技能等级众数（两源同用官方 type�
   assert.deepEqual(
     modes,
     { 1011: { 0: 12, 3: 12, 4: 9 } },
-    'type 归一后按技能统计；type1 11/12 并列取更高 → 12；全脏角色不产出'
+    'canonical type 直入；type3 11/12 并列取更高 → 12；全脏角色不产出'
   );
-  // 2025 源与官方同编号：type 2 = 闪避 → canonical 1（回归：曾按「1.x 技能 ID」误映射为特殊）
-  const s2025 = computeSkillLevelModes([
+  // 回归（原「2025 源 type2 = 闪避」用例的词汇中立化）：type 1 = 闪避原样统计，聚合不做二次映射
+  const dodge = computeSkillLevelModes([
     {
       role_id: '9',
       source: '2025',
       skills: [
-        { type: 2, level: 12 },
-        { type: 2, level: 12 },
-        { type: 2, level: 11 },
+        { type: 1, level: 12 },
+        { type: 1, level: 12 },
+        { type: 1, level: 11 },
       ],
     },
   ]);
-  assert.deepEqual(s2025, { 9: { 1: 12 } }, '2025 源 type2 = 闪避（canonical 1），众数 12');
+  assert.deepEqual(dodge, { 9: { 1: 12 } }, 'type1 = 闪避（canonical），众数 12');
 });
 
 test('computeRoleOwnership：拥有率 = 拥有该角色的去重 uid 数 / 样本池去重 uid 总数', () => {

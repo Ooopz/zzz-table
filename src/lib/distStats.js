@@ -146,7 +146,7 @@ export function computeDist(arr) {
   };
 }
 // ---------- 玩家分布对照（原 web/statsView.js 内嵌实现下放为可测纯函数） ----------
-/** 玩家分布压缩分位点（升序）。approxPercentile（本文件）与 goalAdvisor.percentileAt 共用这一张表——
+/** 玩家分布压缩分位点（升序）。approxPercentile 与 percentileAt（本文件，互为逆运算）共用这一张表——
  *  分位键/分位数列表曾各自硬编码，改表只漏一边会让 P20 地板与分位读数漂移。 */
 export const DIST_Q_KEYS = ['p10', 'p25', 'p50', 'p75', 'p90', 'p95', 'p99'];
 export const DIST_Q_FRACS = DIST_Q_KEYS.map((k) => parseInt(k.slice(1), 10) / 100);
@@ -169,6 +169,24 @@ export function approxPercentile(v, dist) {
     }
   }
   return 50;
+}
+
+/** 从压缩分布的已知分位点线性插值任意分位值（q∈[0,1]；分位键缺失时跳过；无可用点返回 null）。
+ *  dist 只有 p10/p25/p50/p75/p90/p95/p99 等离散点（键序单一权威 = 本文件 DIST_Q_KEYS），
+ *  P20 等任意分位由相邻点插值近似。approxPercentile 的逆运算（值 → 分位 ↔ 分位 → 值），
+ *  消费端：goalAdvisor.synthTarget 的 P20 可达性地板。 */
+export function percentileAt(dist, q) {
+  if (!dist || !Number.isFinite(q)) return null;
+  const known = DIST_Q_KEYS.map((k, i) => [DIST_Q_FRACS[i], dist[k]]).filter(([, v]) => v != null);
+  if (!known.length) return null;
+  if (q <= known[0][0]) return known[0][1];
+  if (q >= known[known.length - 1][0]) return known[known.length - 1][1];
+  for (let i = 0; i < known.length - 1; i++) {
+    const [q0, v0] = known[i];
+    const [q1, v1] = known[i + 1];
+    if (q >= q0 && q <= q1) return v0 + ((v1 - v0) * (q - q0)) / (q1 - q0);
+  }
+  return null;
 }
 
 /**

@@ -4,7 +4,7 @@
 import { computeDist, quantileSorted } from './distStats.js';
 import { canonicalName, CATEGORY } from './names.js';
 import { normalizeStatKey } from './util.js';
-import { mainStatName, SUBSTAT_TYPE_SET, MAIN_STAT_OPTIONS, OFFICIAL_SKILL_TYPE } from '../game/index.js';
+import { mainStatName, SUBSTAT_TYPE_SET, MAIN_STAT_OPTIONS } from '../game/index.js';
 import { substatRolls } from '../game/index.js';
 
 /** 面板 final 值归一化：百分比字符串（"31.4%" → 0.314）与数值字符串/数字统一为数字；空串/纯空白 → null（缺失，不污染 min/count） */
@@ -445,7 +445,7 @@ export function computeRoleOwnership(entries) {
 }
 
 /** 每角色各技能等级众数（{role_id: {canonical技能type: 等级}}）：供「技能养成进度」的目标等级。
- *  技能 type 统一经 OFFICIAL_SKILL_TYPE 归一（两源编号实为同一套，历史误判见 makeSkillStatsAcc 处注释）；
+ *  技能 type 已在 sync 落盘前归一 canonical（见 sync/characters.js、sync/workshop.js 的 OFFICIAL_SKILL_TYPE）；
  *  众数并列取更高等级（确定性）；脏条目（无 role_id / level 非正）跳过。 */
 export function computeSkillLevelModes(entries) {
   return runAcc(makeSkillLevelModeAcc(), entries);
@@ -460,7 +460,7 @@ function makeSkillLevelModeAcc() {
         if (s.type == null || s.level == null) continue;
         const lv = Number(s.level);
         if (!Number.isFinite(lv) || lv <= 0) continue;
-        const t = OFFICIAL_SKILL_TYPE[s.type] ?? s.type;
+        const t = s.type;
         let byType = acc.get(e.role_id);
         if (!byType) acc.set(e.role_id, (byType = new Map()));
         let m = byType.get(t);
@@ -490,17 +490,13 @@ function makeSkillLevelModeAcc() {
   };
 }
 
-/** 每角色 × 技能类型（canonical 编号，见 constants.SKILL_TYPES）的等级分布。
- *  技能 type 统一经 OFFICIAL_SKILL_TYPE 归一（两源编号实为同一套，历史误判见 makeSkillStatsAcc 处注释）。 */
+/** 每角色 × 技能类型（canonical 编号，见 src/game SKILL_TYPES）的等级分布。
+ *  技能 type 已在 sync 落盘前归一 canonical（见 sync/characters.js、sync/workshop.js 的 OFFICIAL_SKILL_TYPE，
+ *  历史误判注记亦在彼处）。 */
 export function computeSkillStats(entries) {
   return runAcc(makeSkillStatsAcc(), entries);
 }
 
-// ⚠️ 历史误判（2026-08 修正）：曾假设 2025 源技能 type 是「游戏内嵌 1.x 技能 ID」（1 闪避/2 特殊/3,6 终结），
-// 为此单设 WS2025_SKILL_TYPE 映射。实为误判——两源 type 编号是同一套官方语义（1 特殊/2 闪避/6 支援）。
-// 暴露路径：耀嘉音（辅助）盘卡「闪避 12 级×90%、特殊 1 级×46%」反直觉；57 角色双源指纹交叉验证：
-// mys 映射适配 43 / WS2025 映射仅 21，且两源逐词条等级分布几乎逐位相同（raw1 12级 90%/87%、raw2 1级 46%/46%）——
-// 若两源语义真不同，同一玩家行为将同时是「人人满特殊」与「人人满闪避」，矛盾。
 function makeSkillStatsAcc() {
   const acc = new Map(); // rid -> Map<type -> number[]>
   return {
@@ -508,7 +504,7 @@ function makeSkillStatsAcc() {
       if (!e || e.role_id == null) return;
       for (const s of e.skills || []) {
         if (s.type == null || s.level == null) continue;
-        const t = OFFICIAL_SKILL_TYPE[s.type] ?? s.type; // 归一化源 type → canonical（两源同一套编号，见 computeSkillLevelModes 注释）
+        const t = s.type;
         let byType = acc.get(e.role_id);
         if (!byType) acc.set(e.role_id, (byType = new Map()));
         if (!byType.has(t)) byType.set(t, []);

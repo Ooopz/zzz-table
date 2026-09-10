@@ -20,10 +20,8 @@ import {
 } from '../game/index.js';
 // discRules 领域规则符号（按规则组标注：A5/H1 主词条与副词条池、A3/A4 成长表、D1-D4 权重、B/E 生成模型与保词条）
 import {
-  // A5：123 号位主词条固定；H1：副词条池配对/展示顺序
+  // A5：123 号位主词条固定（H1 配对/展示顺序在 ./discDisplay.js）
   SLOT_FIXED_MAIN,
-  DP_ROW_PAIRS,
-  DP_SUB_ORDER,
   // A3/A4：成长表与形态判定
   substatGrowthTable,
   substatType,
@@ -40,6 +38,7 @@ import { escapeHtml, formatValue } from '../lib/util.js';
 import { registerZZZ } from './shared.js';
 import { chartBox, dpProbBarOption } from './charts.js';
 import { CHART_HEIGHT } from './visual.js';
+import { DP_ROW_PAIRS, DP_SUB_ORDER } from './discDisplay.js';
 /* global echarts */
 
 /** dpResult 图表的手动挂载（dpCalc 更新数据，不走主 render 的 mountCharts）。

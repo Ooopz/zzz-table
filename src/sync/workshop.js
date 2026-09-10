@@ -15,6 +15,16 @@ import { loadNameIndexes, emptyNameIndexes, resolveWengineName } from './name-in
 import { sleep } from './mihoyo-api.js';
 import { WS_KEY_TO_STAT } from '../game/index.js';
 
+// 官方（工坊两源与米游社账号同一套）技能 type → canonical（游戏 2.0 槽序：0普攻 1闪避 2支援 3特殊 4终结 5核心）。
+// 落盘前归一：data 里技能 type 一律 canonical，读取侧（workshopAgg/wsRoles/goalView）不再映射。
+// ⚠️ 与 characters.js 各留一份（仿 collect.js↔mihoyo-api.js 自包含先例），改任一处必须同步另一处（test/official-skill-type.test.js 对账）。
+// ⚠️ 历史误判（2026-08 修正）：曾假设 2025 源技能 type 是「游戏内嵌 1.x 技能 ID」（1 闪避/2 特殊/3,6 终结），
+// 为此单设 WS2025_SKILL_TYPE 映射。实为误判——两源 type 编号是同一套官方语义（1 特殊/2 闪避/6 支援）。
+// 暴露路径：耀嘉音（辅助）盘卡「闪避 12 级×90%、特殊 1 级×46%」反直觉；57 角色双源指纹交叉验证：
+// mys 映射适配 43 / WS2025 映射仅 21，且两源逐词条等级分布几乎逐位相同（raw1 12级 90%/87%、raw2 1级 46%/46%）——
+// 若两源语义真不同，同一玩家行为将同时是「人人满特殊」与「人人满闪避」，矛盾。
+export const OFFICIAL_SKILL_TYPE = Object.freeze({ 0: 0, 1: 3, 2: 1, 3: 4, 5: 5, 6: 2 }); // 官方语义：0普攻 1特殊技 2闪避 3连携 5核心被动 6支援（无 4）
+
 const WEIGHTS_FILE = path.join(DATA_DIR, 'workshop-weights.json'); // 角色默认流派权重（工坊有效词条口径）
 // 名称索引（统一 resolver，library.json 为权威源）：工坊 nick_name 差异在写时解析回 wiki 标准名，保证与 library/plans 一致；
 // library.json 缺失/损坏时降级为空索引（不归一、不崩——测试可直接 import 本模块）
@@ -117,8 +127,8 @@ export function extractBuild(v3Data, roleId, ctx) {
     // mys 源：工坊格式化结构（名称统一解析回 wiki 标准名 / 属性键归一）
     return {
       ...base,
-      source: 'mys', // 源标记（技能 type 为官方语义，与 2025 源同编号——见 workshopAgg makeSkillStatsAcc 处注释）
-      skills: (ij.skills || []).map((s) => ({ type: s.skill_type, level: s.level })),
+      source: 'mys', // 源标记（技能 type 落盘前已归一 canonical，见 OFFICIAL_SKILL_TYPE）
+      skills: (ij.skills || []).map((s) => ({ type: OFFICIAL_SKILL_TYPE[s.skill_type] ?? s.skill_type, level: s.level })),
       weapon: ij.weapon && {
         id: ij.weapon.id,
         name: ij.weapon.name
@@ -200,8 +210,8 @@ export function extractBuild(v3Data, roleId, ctx) {
       .filter(Boolean);
     return {
       ...base,
-      source: '2025', // 源标记（技能 type 为官方语义，与 mys 源同编号——见 workshopAgg makeSkillStatsAcc 处注释）
-      skills: (ij.SkillLevelList || []).map((s) => ({ type: s.Index, level: s.Level })), // 与 mys 源同构 {type, level}
+      source: '2025', // 源标记（技能 type 落盘前已归一 canonical，见 OFFICIAL_SKILL_TYPE）
+      skills: (ij.SkillLevelList || []).map((s) => ({ type: OFFICIAL_SKILL_TYPE[s.Index] ?? s.Index, level: s.Level })), // 与 mys 源同构 {type, level}
       weapon,
       panel: computeEnkaPanel(ij),
       equips,

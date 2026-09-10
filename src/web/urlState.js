@@ -2,7 +2,7 @@
 // 旧值（recommend/discstats/card/table/stats）由 migrateViewState 一次性迁移（simulate 现为合法视图值，不在旧值表），不再保留兼容分支。
 // 「我的角色」已无二级 tab（角色诊断 2026-09 删），role 恒为手风琴展开角色。
 import { userConfig } from './data.js';
-import { VIEWS, VIEW_VALUES, LEGACY_VIEW_MAP } from '../game/index.js';
+import { VIEWS, VIEW_VALUES, LEGACY_VIEW_MAP } from './views.js';
 import { wikiTab, setWikiTab } from './wiki.js';
 import { expandedChar, setExpandedChar } from './myChars.js';
 import { selectedDisc, setSelectedDisc } from './discstats.js';

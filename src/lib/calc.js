@@ -5,16 +5,16 @@ import { resolveEntry, CATEGORY } from './names.js';
 import {
   STAT,
   SUBSTAT,
-  PANEL_ORDER,
+  PANEL_ORDER as panelOrder,
   PANEL_STAT_MAP,
   EFFECTIVE_ATTRS,
   FIXED_SUBSTATS,
   MULT_STATS,
-  MAX_LEVEL_STATS,
-  TARGET_STATS,
-  TARGET_PERCENTS,
+  MAX_LEVEL_STATS as maxLevelStats,
+  TARGET_STATS as targetStats,
+  TARGET_PERCENTS as targetPercents,
   SKILL,
-  isDamageBonus as isDamageBonusName,
+  isDamageBonus,
 } from '../game/index.js';
 // 驱动盘领域规则（成长表/形态判定/成长次数/有效命中）权威在 discRules.js：
 // substatGrowthTable / discGrowth 经此转发保持既有 import 链；discHits 已不收（命中统计经 Disc.getHitCount 走 discRules C3）；substatType 消费方直接 import discRules.js
@@ -39,16 +39,10 @@ export function setCalcContext(c) {
   ctxVersion++;
 }
 
-// ---------- 属性常量（单一权威定义在 constants.js，此处仅兼容导出） ----------
-export const panelOrder = PANEL_ORDER;
-/** 面板属性 → 对应哪些有效副词条类型（用于按有效属性配置高亮面板行） */
-const multStats = MULT_STATS; // 百分比加成按 基础×(1+Σ%)
-/** 满级行仅含的基础属性（wiki 成长表「满级」只有这三项），wiki 视图的「满级X」列与此对齐 */
-export const maxLevelStats = MAX_LEVEL_STATS;
-export const isDamageBonus = isDamageBonusName;
-
-export const targetStats = TARGET_STATS;
-export const targetPercents = TARGET_PERCENTS;
+// ---------- 属性常量（单一权威定义在 game/disc.js、character.js，此处仅 live 转发保持既有 import 链） ----------
+// ⚠️ 必须用 export{} 转发而非 `export const x = SYMBOL`：calc 会被 game/character.js 顶层 import，
+// 若在模块求值期解引用 character 域符号，按 game/index 先进入的 import 顺序会 TDZ 崩。
+export { panelOrder, maxLevelStats, isDamageBonus, targetStats, targetPercents };
 
 // ---------- 副词条成长与命中 ----------
 // ⚠️ substatGrowthTable / discGrowth 经此转发（simCalc / models 从 calc 取）；substatType 消费方直接 import discRules.js 权威源。
@@ -83,7 +77,7 @@ export function hitCount(character) {
  *  其余属性（暴击率等）= 基础+Σ值；穿透值为固定值累加。base 为空返回 null。 */
 export function panelBonus(name, base, pct = 0, flat = 0) {
   if (base == null) return null;
-  const bonus = multStats.has(name) ? base * pct + flat : flat + pct;
+  const bonus = MULT_STATS.has(name) ? base * pct + flat : flat + pct;
   return { bonus, final: base + bonus };
 }
 
@@ -93,7 +87,7 @@ export function classifyBonus(name, value) {
   if (name == null || value == null || !Number.isFinite(value)) return null;
   if (isDamageBonus(name)) return { kind: 'damage' };
   if (name === STAT.PEN_VALUE) return { kind: 'pen' };
-  return multStats.has(name) ? (value <= 1 ? { kind: 'pct' } : { kind: 'flat' }) : { kind: 'pct' };
+  return MULT_STATS.has(name) ? (value <= 1 ? { kind: 'pct' } : { kind: 'flat' }) : { kind: 'pct' };
 }
 
 /** 加成分类累加（calc/simCalc 共用）：按 classifyBonus 分入 damage/穿透值/pct/flat 四类目标 */

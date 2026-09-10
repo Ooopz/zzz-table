@@ -1,8 +1,8 @@
-// test/plansSlim.test.js —— lib/plansSlim 纯函数单测：剥离 desc/skills 后其余字段与嵌套 plans 数组保留。
+// test/plansSlim.test.js —— sync/plans.js 载荷瘦身契约单测（原 lib/plansSlim.js，2026-09 并入）：剥离 desc/skills 后其余字段与嵌套 plans 数组保留。
 // server /api/data 与 publish-release 静态构建共用该瘦身，剥离集改动须红本测试（纯内联，永不 SKIP）。
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { slimPlans } from '../src/lib/plansSlim.js';
+import { slimPlans } from '../src/sync/plans.js';
 
 test('slimPlans：剥离 desc/skills，其余字段保留，plans 嵌套数组逐条瘦身', () => {
   const plans = {

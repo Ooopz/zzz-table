@@ -1,7 +1,7 @@
 // test/panelBench.test.js —— 推荐方案三档统计（computeRecTierStats：low/mid/high 的 mean/median/sd/cv）
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeRecTierStats } from '../src/lib/panelBench.js';
+import { computeRecTierStats } from '../src/lib/plansStats.js';
 import { loadDataFile } from './helpers.js';
 
 const PLANS = {
