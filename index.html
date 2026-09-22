@@ -237,8 +237,8 @@
           <button class="close" id="targetClose" aria-label="关闭">✕</button>
           <h2>养成配置 · <span id="targetChar" style="color: var(--acc)"></span></h2>
           <p style="color: var(--dim); font-size: var(--fs-sm)">
-            目标属性数值请在汇总表属性列「目标 N」子行点击修改。此处勾选<b>有效副词条</b>，配置推荐音擎与 4/5/6
-            号位主词条（或从下方推荐方案「应用」一键填入）。
+            目标属性数值请在汇总表属性列「目标 N」子行点击修改。此处勾选<b>有效副词条</b>，配置推荐音擎、4/5/6
+            号位主词条与二/四件套（或从下方推荐方案「应用」一键填入）。
           </p>
           <div class="eff-block">
             <h3 style="margin-top: 6px">有效副词条</h3>
@@ -266,6 +266,18 @@
             <div class="titem">
               <label>6号位主词条</label>
               <select id="targetMain6">
+                <option value="">—</option>
+              </select>
+            </div>
+            <div class="titem">
+              <label>二件套</label>
+              <select id="targetSet2" data-detail="与四件套不可选同一套装">
+                <option value="">—</option>
+              </select>
+            </div>
+            <div class="titem">
+              <label>四件套</label>
+              <select id="targetSet4" data-detail="与二件套不可选同一套装">
                 <option value="">—</option>
               </select>
             </div>

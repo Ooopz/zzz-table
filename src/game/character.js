@@ -45,13 +45,15 @@ export const TARGET_STATS = Object.freeze([
 /** 目标中按百分比存储的属性（用户填整数，内部 /100） */
 export const TARGET_PERCENTS = new Set([STAT.CR, STAT.CD, STAT.PEN_RATE, '属性伤害加成']);
 
-/** 目标配置里的非属性字段：推荐音擎 + 4/5/6 号位主词条 + 有效副词条（存于 charTargets[name]；
- *  存副词条类型数组，属性粒度勾选经 PANEL_STAT_MAP 展开） */
+/** 目标配置里的非属性字段：推荐音擎 + 4/5/6 号位主词条 + 二/四件套 + 有效副词条（存于 charTargets[name]；
+ *  存副词条类型数组，属性粒度勾选经 PANEL_STAT_MAP 展开。套装值为 library.discs 规范名，二/四件套不得相同） */
 export const TARGET_KEYS = Object.freeze({
   WENGINE: '推荐音擎',
   MAIN4: '4号位主词条',
   MAIN5: '5号位主词条',
   MAIN6: '6号位主词条',
+  SET2: '推荐二件套',
+  SET4: '推荐四件套',
   VALID_STATS: '有效副词条',
 });
 

@@ -50,6 +50,24 @@ function fillMainSelect(slot) {
     '<option value="">—</option>' +
     MAIN_STAT_OPTIONS[slot].map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
 }
+/** 填充二/四件套下拉：候选 = 驱动盘库全部套装（与模拟器面板同源；值即库规范名） */
+function fillSetSelects() {
+  const names = Object.keys(library.discs || {}).sort((a, b) => a.localeCompare(b, 'zh'));
+  const opts =
+    '<option value="">—</option>' + names.map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  for (const id of ['targetSet2', 'targetSet4']) document.getElementById(id).innerHTML = opts;
+}
+/** 二/四件套互斥：对方已选套装在本栏禁用（必选无"不限"，禁用即杜绝同选；须在两栏值就位后调用） */
+function refreshSetState() {
+  const s2 = document.getElementById('targetSet2');
+  const s4 = document.getElementById('targetSet4');
+  for (const [sel, other] of [
+    [s2, s4],
+    [s4, s2],
+  ]) {
+    for (const opt of sel.options) opt.disabled = !!opt.value && opt.value === other.value;
+  }
+}
 
 function openTargetSettings(name) {
   if (currentTargetChar !== name) planSort.reset(); // 切换角色时重置方案排序
@@ -63,6 +81,10 @@ function openTargetSettings(name) {
   document.getElementById('targetMain4').value = target[TARGET_KEYS.MAIN4] || '';
   document.getElementById('targetMain5').value = target[TARGET_KEYS.MAIN5] || '';
   document.getElementById('targetMain6').value = target[TARGET_KEYS.MAIN6] || '';
+  fillSetSelects();
+  document.getElementById('targetSet2').value = target[TARGET_KEYS.SET2] || '';
+  document.getElementById('targetSet4').value = target[TARGET_KEYS.SET4] || '';
+  refreshSetState();
   // 有效副词条（副词条粒度，攻击/生命/防御 % 与固定分开勾选）；预勾选 = 当前生效集
   // （手动保存 → 游戏推荐 equipPlan 兜底）。命中/概率统一 % 口径，固定值不计命中
   const validSet = new Set(readValidStats(name));
@@ -78,6 +100,19 @@ async function saveTargetSettings() {
   // ⚠️ 从现有 targets 合并（不得整体替换）：弹窗只管 音擎/主词条/有效副词条，
   // 属性目标值（应用方案/goalEdit/设定目标 写入的）必须保留——曾用 {} 整体覆盖导致「应用了没生效」
   const target = { ...readCharTarget(currentTargetChar) };
+  // 二/四件套：必选（无"不限"）且不得相同——互斥禁用挡住手选，此处再兜存储残留（2+2+2 应用可致新旧同名）
+  const set2 = document.getElementById('targetSet2').value;
+  const set4 = document.getElementById('targetSet4').value;
+  if (!set2 || !set4) {
+    notify('请先选择二件套与四件套再保存');
+    return;
+  }
+  if (set2 === set4) {
+    notify('二件套与四件套不可选同一套装');
+    return;
+  }
+  target[TARGET_KEYS.SET2] = set2;
+  target[TARGET_KEYS.SET4] = set4;
   // 音擎/主词条：空值不覆盖
   const w = document.getElementById('targetWengine').value.trim();
   if (w) target[TARGET_KEYS.WENGINE] = w;
@@ -225,6 +260,11 @@ async function applyPlan(name, idx) {
   if (p.mainProps?.[4]) target[TARGET_KEYS.MAIN4] = mainStatName(p.mainProps[4]);
   if (p.mainProps?.[5]) target[TARGET_KEYS.MAIN5] = mainStatName(p.mainProps[5]);
   if (p.mainProps?.[6]) target[TARGET_KEYS.MAIN6] = mainStatName(p.mainProps[6]);
+  // 套装：首个 cnt:4 → 四件套、首个 cnt:2 → 二件套；2+2+2 方案无四件套不写该字段（沿用"只覆盖不删除"语义，手动补）
+  const set4 = (p.sets || []).find((s) => s.cnt === 4);
+  if (set4) target[TARGET_KEYS.SET4] = set4.name;
+  const set2 = (p.sets || []).find((s) => s.cnt === 2);
+  if (set2) target[TARGET_KEYS.SET2] = set2.name;
   // 推荐副词条 → 有效副词条（仅保留合法类型）
   if (p.subStats?.length) target[TARGET_KEYS.VALID_STATS] = p.subStats.filter((s) => SUBSTAT_TYPE_SET.has(s));
   const ok = await saveCharTarget(name, target);
@@ -323,6 +363,8 @@ export function initUi() {
     .getElementById('targetClose')
     .addEventListener('click', () => document.getElementById('targetModal').classList.remove('show'));
   document.getElementById('targetSave').addEventListener('click', saveTargetSettings);
+  for (const id of ['targetSet2', 'targetSet4'])
+    document.getElementById(id).addEventListener('change', refreshSetState);
   document.getElementById('targetClear').addEventListener('click', async () => {
     if (!currentTargetChar) return;
     const ok = await saveCharTarget(currentTargetChar, {});
