@@ -42,6 +42,17 @@ export function cv(vals, mean) {
   const s = sd(vals, mean);
   return s != null && mean ? s / Math.abs(mean) : null;
 }
+/** 均值（naive 求和）：浮点累加误差可让全同值样本（如全为 1.2）的 mean 落到 [min,max] 外 ~1ulp
+ *  （1.2+1.2+… 的和丢失精度 → mean=1.1999999999999922）。数学上均值必在 [min,max] 内，
+ *  故仅在浮点容差内收回边界；容差外的真实越界（聚合回归，如 min/max 与 mean 样本集不一致）原样返回，交由出口自检报错。 */
+export function meanIn(vals, min, max) {
+  const m = vals.reduce((a, v) => a + v, 0) / vals.length;
+  const eps = 1e-9 * Math.max(1, Math.abs(m));
+  if (m < min && m >= min - eps) return min;
+  if (m > max && m <= max + eps) return max;
+  return m;
+}
+
 /** computeDist 空结果：与正常返回同形（键齐全、值为 null）——此前空数组只返回 5 个键，消费端拿 undefined 无报错 */
 const EMPTY_DIST = Object.freeze({
   count: 0,
@@ -73,7 +84,7 @@ export function computeDist(arr) {
   const s = arr.filter(Number.isFinite).sort((a, b) => a - b);
   if (!s.length) return { ...EMPTY_DIST };
   const n = s.length;
-  const mean = s.reduce((a, v) => a + v, 0) / n;
+  const mean = meanIn(s, s[0], s[n - 1]);
   const sdev = sd(s, mean);
   // s 已排序，直接用 quantileSorted 避免反复排序
   const p5 = quantileSorted(s, 0.05);

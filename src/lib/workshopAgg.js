@@ -1,7 +1,7 @@
 // src/lib/workshopAgg.js —— 工坊配装数据（workshop.json）汇总纯函数（Node 与浏览器共用）
 // 输入 workshop.json 的 entries（每条约一个玩家角色的配装），按角色/盘/玩家聚合出全部统计；
 // 正式入口为 computeAllWorkshopStats 单遍历（见下方累加器说明），各公开单函数为测试/复用保留。
-import { computeDist, quantileSorted } from './distStats.js';
+import { computeDist, meanIn, quantileSorted } from './distStats.js';
 import { canonicalName, CATEGORY } from './names.js';
 import { normalizeStatKey } from './util.js';
 import { mainStatName, SUBSTAT_TYPE_SET, MAIN_STAT_OPTIONS } from '../game/index.js';
@@ -367,7 +367,7 @@ function lightDist(vals) {
     count: n,
     min: s[0],
     max: s[n - 1],
-    mean: s.reduce((a, v) => a + v, 0) / n,
+    mean: meanIn(s, s[0], s[n - 1]),
     median: quantileSorted(s, 0.5),
     p10: quantileSorted(s, 0.1),
     p90: quantileSorted(s, 0.9),

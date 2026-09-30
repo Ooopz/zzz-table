@@ -1,7 +1,7 @@
 // test/distStats.test.js —— 分布统计纯函数 + 属性相关
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { quantile, median, computeDist, sd, approxPercentile, histCumPct, histPctValue } from '../src/lib/distStats.js';
+import { quantile, median, computeDist, sd, approxPercentile, histCumPct, histPctValue, meanIn } from '../src/lib/distStats.js';
 import { loadDataFile } from './helpers.js';
 
 test('quantile/median：线性插值', () => {
@@ -92,4 +92,17 @@ test('histCumPct/histPctValue：直方图累计分位互转（面板分布分位
   // 缺 hist / 空输入
   assert.equal(histCumPct(1, null), null);
   assert.equal(histPctValue(50, {}), null);
+});
+
+test('meanIn：全同值样本的浮点求和误差收回 [min,max] 边界', () => {
+  // 回归：500 个 1.2 naive 求和 → mean=1.1999999999999922，违反自检不变量 mean∈[min,max]
+  const flat = Array.from({ length: 500 }, () => 1.2);
+  assert.equal(computeDist(flat).mean, 1.2);
+  // 容差内贴边同样收回（0.24 场景）
+  assert.equal(computeDist(Array.from({ length: 300 }, () => 0.24)).mean, 0.24);
+  // 正常异质数据不受影响（普通均值，不在边界）
+  const d = computeDist([1, 2, 3, 4]);
+  assert.equal(d.mean, 2.5);
+  // 真实越界（min/max 与均值样本集不一致的回归场景）不被掩盖：meanIn 直接返回越界值
+  assert.equal(meanIn([10, 10], 0, 5), 10);
 });
