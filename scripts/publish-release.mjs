@@ -218,19 +218,26 @@ async function buildRelease() {
       `<link rel="icon" type="image/webp" href="data:image/webp;base64,${faviconB64}" />`
     )
     // header 左上角 logo（同一文件）也内联：相对路径在 Pages 域名下会 404
-    .replace(/src="src\/img\/logo\.webp"/, `src="data:image/webp;base64,${faviconB64}"`)
+    .replace(/src="assets\/img\/logo\.webp"/, `src="data:image/webp;base64,${faviconB64}"`)
     .replace(/<link rel="stylesheet"[^>]*>/, `<style>\n${cssInline}\n</style>`)
     .replace(
-      /<script src="\/src\/vendor\/echarts\.min\.js"><\/script>/,
+      /<script src="\/assets\/vendor\/echarts\.min\.js"><\/script>/,
       `<script>\n${vendor('echarts.min.js')}\n</script>`
     )
     .replace(
-      /<script src="\/src\/vendor\/echarts-gl\.min\.js"><\/script>/,
+      /<script src="\/assets\/vendor\/echarts-gl\.min\.js"><\/script>/,
       `<script>\n${vendor('echarts-gl.min.js')}\n</script>`
     )
     .replace('</head>', `  <script>window.__STATIC__ = true;\n${dataJs}</script>\n  </head>`)
     .replace('</head>', `  <script>window.__COLLECT_JS__=${collectLiteral};</script>\n  </head>`)
     .replace(/<script type="module" src="\/src\/web\/main\.js"><\/script>/, `<script>\n${escScript(appJs)}\n</script>`);
+  // 守卫：产物应为全内联单文件——残留任何指向本地文件的 src/href（/src、/assets、assets/、style.css 等）
+  // 意味着上面的替换正则没跟上路径改名（曾致 Pages 版 logo/echarts 全挂且静默上线），构建必须失败。
+  // 只匹配字面量前缀；模板串如 src="${icon}" 是运行时 data URL，不算残留
+  const leftovers = [...html.matchAll(/(?:src|href)="(?:\/(?:src|assets)\/|assets\/|src\/|style\.css)[^"]*"/g)].map((m) => m[0]);
+  if (leftovers.length) {
+    throw new Error(`构建产物残留未内联的本地引用（替换正则与 index.html 路径脱节）：\n  ${[...new Set(leftovers)].join('\n  ')}`);
+  }
   writeFileSync(join(REL, 'index.html'), html);
   rmSync(join(REL, '_noto-subset.ttf'), { force: true });
 
