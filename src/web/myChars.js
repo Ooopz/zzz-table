@@ -83,8 +83,7 @@ function discTooltipFull(d, validSet) {
  *  未配置目标时返回空串（不加悬浮）；已全部达成时提示无需额外副词条。
  *  ⚠️ 本函数返回体最终经 escapeHtml 存入 data-detail 属性，浏览器读 .dataset 时解码一次后按 HTML 执行
  *  （render.js showTip → tipEl.innerHTML 汇点）——凡是拼接进来的数据字面片段必须先 escapeHtml（与 charDetail 同款约定）。 */
-function gapAdviceHtml(character, R) {
-  const g = targetGap(character, R);
+function gapAdviceHtml(character, g) {
   if (!g) return '';
   if (!g.items.length) return `<b>${escapeHtml(character.name)}</b><br>目标属性已全部达成，无需额外副词条`;
   const rows = g.items
@@ -107,10 +106,9 @@ function gapAdviceHtml(character, R) {
 /** 缺口列（原副词条命中改造）：毕业状态 + 缺口明细 + 命中总数，免悬浮直接可见。
  *  毕业状态：已毕业 ✓（无缺口）/ 缺口 N（N = 总缺词条数）/ 未设目标；缺口明细逐行「属性 差N条」，
  *  无法靠副词条补足的标「不可补」；悬浮保留完整 current→target 明细。 */
-function gapCellHtml(character, R) {
+function gapCellHtml(character, g) {
   const hits = character.hitCount(); // % 口径有效命中总数
   const hitSpan = hits != null ? `<span class="gap-hits">命中 ${hits}</span>` : '';
-  const g = targetGap(character, R);
   if (!g) return `<td class="thit"><span class="gap-state">未设目标</span></td>`;
   if (!g.items.length) {
     return `<td class="thit"><span class="gap-state good">已毕业 ✓</span>${hitSpan}</td>`;
@@ -126,7 +124,7 @@ function gapCellHtml(character, R) {
   const unsupRow = unsup.length
     ? `<div class="gap-row gap-unsup">${unsup.map((it) => escapeHtml(it.name)).join('/')} 不可补</div>`
     : '';
-  const tip = gapAdviceHtml(character, R);
+  const tip = gapAdviceHtml(character, g);
   return `<td class="thit"${tip ? ` data-detail="${escapeHtml(tip)}"` : ''}>
     <span class="gap-state mid">缺口 ${g.total}</span>${hitSpan}
     ${rows}
@@ -325,8 +323,10 @@ export function renderTable(ownedList, container, { unowned = [] } = {}) {
       .join('');
     cell['驱动盘'] = `<td class="tdisc"><div class="tdisc-ico">${discIcons || '未佩戴'}</div></td>`;
 
-    cell['缺口'] = gapCellHtml(character, R);
-    const gapTotal = targetGap(character, R)?.total ?? null; // 缺口列排序值
+    // 缺口一次算清：单元格渲染与排序值共用（此前一处渲染 + 两处排序各算一遍 targetGap）
+    const gap = targetGap(character, R);
+    cell['缺口'] = gapCellHtml(character, gap);
+    const gapTotal = gap?.total ?? null; // 缺口列排序值
 
     const tInfo = charTargetInfo(character.name, targetStats); // 属性列目标子行信息（每角色一次）
     for (const s of targetStats) cell[s] = cellStats(R, target, s, tInfo, character.name);
