@@ -534,7 +534,8 @@ export const requestHandler = async (req, res) => {
     }
     if (req.method === 'GET' && url === '/api/config') {
       const config = readDataJson('user-config.json', null);
-      return respond(res, 200, { ok: true, config: config || { charTargets: {}, validStats: {} } });
+      // 回退空对象即可：默认值权威在 web/data.js defaultConfig()，此处再写一份只会漂移
+      return respond(res, 200, { ok: true, config: config || {} });
     }
     if (req.method === 'POST' && url === '/api/config') {
       const body = await readBody(req);
