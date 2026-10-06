@@ -359,20 +359,28 @@ const THREE_SUB_CHANCE = 0.8; // 初始 3 词条盘概率
 const FOUR_SUB_TIMES = 5; // 4 词条盘成长次数
 const THREE_SUB_TIMES = 4; // 3 词条盘补词条后的成长次数
 
-// B4/B5：强化成长通过率。递归 times 次（每次从 nowGroup 随机一条 +score），统计 add 相对 need 的路径占比。
-// op = '>'（默认，严格大于）| '='（恰好等于）| '>='（不低于）——向后兼容：不传 op 即原严格大于语义。
-export function passChance(times, need, nowGroup, op = '>') {
+// B4/B5：强化成长通过率。单次 dfs 同时统计 严格超过(gt)/恰好(eq) 两计数——ge = gt+eq，
+// slotProbs「超过 + 持平」成对调用时复用同一次枚举（原先两口径各全量枚举一遍，纯浪费）。
+function passCounts(times, need, scores) {
   let total = 0;
-  let pass = 0;
+  let gt = 0;
+  let eq = 0;
   (function dfs(leave, add) {
     if (leave <= 0) {
       total++;
-      if (op === '=' ? add === need : op === '>=' ? add >= need : add > need) pass++;
+      if (add > need) gt++;
+      else if (add === need) eq++;
       return;
     }
-    for (const g of nowGroup) dfs(leave - 1, add + g);
+    for (const g of scores) dfs(leave - 1, add + g);
   })(times, 0);
-  return total === 0 ? 0 : pass / total;
+  return { total, gt, eq };
+}
+// op = '>'（默认，严格大于）| '='（恰好等于）| '>='（不低于）——向后兼容：不传 op 即原严格大于语义。
+export function passChance(times, need, nowGroup, op = '>') {
+  const c = passCounts(times, need, nowGroup);
+  if (c.total === 0) return 0;
+  return op === '=' ? c.eq / c.total : op === '>=' ? (c.gt + c.eq) / c.total : c.gt / c.total;
 }
 
 /** 构造 10 词条池：weights 为角色 10 维价值权重（score），rest 默认 1（同盘不重复），blockedIdx 排除主词条同类 */
@@ -424,24 +432,34 @@ export function computeDiscProb(types, goal, directedTypes = [], op = '>') {
   );
 
   let totalW = 0;
-  let totalA = 0;
-  let totalB = 0;
+  let sumA = { gt: 0, eq: 0 };
+  let sumB = { gt: 0, eq: 0 };
   const branchChance = (times, scoreSum, scores) => {
-    if (op === '>') return scoreSum > goal ? 1 : passChance(times, goal - scoreSum, scores);
-    if (op === '>=') return scoreSum >= goal ? 1 : passChance(times, goal - scoreSum, scores, '>=');
-    return scoreSum > goal ? 0 : passChance(times, goal - scoreSum, scores, '=');
+    if (scoreSum > goal) return { gt: 1, eq: 0 }; // 基础分已超：全路径通过（'=' 口径为 0）；恰平仍需走 dfs（词条分数非 0 时 gt/eq 非平凡）
+    const c = passCounts(times, goal - scoreSum, scores);
+    if (!c.total) return { gt: 0, eq: 0 };
+    return { gt: c.gt / c.total, eq: c.eq / c.total };
   };
   for (const g of groups) {
-    const pA = branchChance(FOUR_SUB_TIMES, g.scoreSum, g.scores);
-    const pB = branchChance(THREE_SUB_TIMES, g.scoreSum, g.scores);
+    const a = branchChance(FOUR_SUB_TIMES, g.scoreSum, g.scores);
+    const b = branchChance(THREE_SUB_TIMES, g.scoreSum, g.scores);
     totalW += g.weight;
-    totalA += pA * g.weight;
-    totalB += pB * g.weight;
+    sumA.gt += a.gt * g.weight;
+    sumA.eq += a.eq * g.weight;
+    sumB.gt += b.gt * g.weight;
+    sumB.eq += b.eq * g.weight;
   }
-  if (totalW === 0) return { chance: 0, p4: 0, p3: 0 };
-  const mA = totalA / totalW; // 4 词条盘路径（成长 5 次）通过率
-  const mB = totalB / totalW; // 3 词条盘路径（补词条后成长 4 次）通过率
-  return { chance: FOUR_SUB_CHANCE * mA + THREE_SUB_CHANCE * mB, p4: mA, p3: mB };
+  if (totalW === 0) return { chance: 0, p4: 0, p3: 0, chanceTie: 0 };
+  const pick = (s) => (op === '=' ? s.eq : op === '>=' ? s.gt + s.eq : s.gt);
+  const mA = pick(sumA); // 4 词条盘路径（成长 5 次）通过率
+  const mB = pick(sumB); // 3 词条盘路径（补词条后成长 4 次）通过率
+  return {
+    chance: FOUR_SUB_CHANCE * mA + THREE_SUB_CHANCE * mB,
+    p4: mA,
+    p3: mB,
+    // 「不低于」口径（= 严格超过 + 恰好打平）与 chance 同一次枚举得出，成对调用方免重复枚举
+    chanceTie: (FOUR_SUB_CHANCE * (sumA.gt + sumA.eq) + THREE_SUB_CHANCE * (sumB.gt + sumB.eq)) / totalW,
+  };
 }
 
 // B6/B7/B8：位置级概率（主词条加权 + 位置系数 + 定向道具）。
@@ -460,26 +478,27 @@ export function computePosProb(pos, mains, types, goal, directedTypes = [], opts
     // 定向：位置确定；456 主词条确定（123 主词条固定）
     if (pos <= 3) {
       const r = computeDiscProb(types, goal, directedTypes, op);
-      return { prob: r.chance, hitMain: 1, p4: r.p4, p3: r.p3 };
+      return { prob: r.chance, probTie: r.chanceTie, hitMain: 1, p4: r.p4, p3: r.p3 };
     }
     const blockedIdx = DISC_SUBSTATS.indexOf(DISC_MAIN_BLOCK[opts.posFixed]);
     const pool = types.map((t) => ({ ...t, rest: t.typeIndex === blockedIdx ? 0 : t.rest }));
     const r = computeDiscProb(pool, goal, directedTypes, op);
-    return { prob: r.chance, hitMain: 1, p4: r.p4, p3: r.p3 };
+    return { prob: r.chance, probTie: r.chanceTie, hitMain: 1, p4: r.p4, p3: r.p3 };
   }
   if (pos <= 3) {
     const r = computeDiscProb(types, goal, directedTypes, op);
-    return { prob: r.chance / 6, hitMain: 1 / 6, p4: r.p4, p3: r.p3 };
+    return { prob: r.chance / 6, probTie: r.chanceTie / 6, hitMain: 1 / 6, p4: r.p4, p3: r.p3 };
   }
   const probWeights = DISC_MAIN_PROB_WEIGHTS[pos];
   const totalAll = Object.values(probWeights).reduce((s, v) => s + v, 0); // 全位置主词条权重和（≈100）
-  if (totalAll === 0) return { prob: 0, hitMain: 0, p4: 0, p3: 0 };
+  if (totalAll === 0) return { prob: 0, probTie: 0, hitMain: 0, p4: 0, p3: 0 };
   const mainList = mains && mains.length ? mains : Object.keys(probWeights);
   const totalW = mainList.reduce((s, m) => s + (probWeights[m] || 0), 0); // 选中集权重和（p4/p3 归一口径）
   let hitMain = 0;
   let p4 = 0;
   let p3 = 0;
   let prob = 0;
+  let probTie = 0;
   for (const main of mainList) {
     const w = probWeights[main] || 0;
     const f = w / totalAll / 6; // 位置 1/6 × 主词条出现概率
@@ -491,8 +510,9 @@ export function computePosProb(pos, mains, types, goal, directedTypes = [], opts
     p4 += r.p4 * rel;
     p3 += r.p3 * rel;
     prob += r.chance * f;
+    probTie += r.chanceTie * f;
   }
-  return { prob, hitMain, p4, p3 };
+  return { prob, probTie, hitMain, p4, p3 };
 }
 
 // ============================================================

@@ -292,8 +292,8 @@ function accordionWeights(name) {
 function slotProbs(pos, mains, pool, goal, minHits, dirMain, dirSubs) {
   const opts = dirMain ? { posFixed: dirMain } : {};
   const dirSubIdx = (dirSubs || []).map((n) => DISC_SUBSTATS.indexOf(n));
-  const { prob, hitMain, p4, p3 } = computePosProb(pos, mains, pool, goal, dirSubIdx, opts);
-  const { prob: probTie } = computePosProb(pos, mains, pool, goal, dirSubIdx, opts, '>=');
+  // 一次枚举同时给「超过」与「持平」两口径（chanceTie 与 chance 同一 dfs 统计，原先成对调用多枚举一整遍）
+  const { prob, probTie, hitMain, p4, p3 } = computePosProb(pos, mains, pool, goal, dirSubIdx, opts);
   const { prob: probKeep } = computePosProbKeep(pos, mains, pool, goal, minHits, dirSubIdx, opts);
   return { prob, probTie, probKeep, p4, p3, hitMain };
 }
