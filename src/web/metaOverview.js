@@ -7,7 +7,8 @@ import { registerChart, chartBox, rankPyramidOption, relicBarOption, roleOwnersh
 import { CHART_HEIGHT } from './visual.js';
 import { statsNotReady, roleKeyedMap } from './wsRoles.js';
 
-function renderOverview() {
+/** 渲染「资料→总览」子面板（wiki.js 的 PANEL_RENDERERS 调用） */
+export function renderMetaOverview() {
   const notReady = statsNotReady();
   if (notReady) return notReady;
   const roleNames = Object.values(plans).map((v) => v.name);
@@ -31,12 +32,7 @@ function renderOverview() {
   </div>`;
 }
 
-/** 渲染「资料→总览」子面板（wiki.js 的 PANEL_RENDERERS 调用） */
-export function renderMetaOverview() {
-  return renderOverview();
-}
-
-/** 练度内容：装配评分分布 / 影画档位金字塔（返回 chart-card 片段，由 renderOverview 包 chart-grid） */
+/** 练度内容：装配评分分布 / 影画档位金字塔（返回 chart-card 片段，由 renderMetaOverview 包 chart-grid） */
 function progressCardsHtml() {
   if (!Object.keys(plans || {}).length) return '';
   const R = workshopStats;
