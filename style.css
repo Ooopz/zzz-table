@@ -2801,21 +2801,12 @@ button.mini.on {
   text-decoration: underline;
 }
 /* 汇总表属性列目标子行：目标值 + 玩家分位，点击手改；无目标给「设置目标」入口 */
-.t-target {
-  display: block;
-  text-align: center; /* 跟随上方居中的当前值 */
-  font-size: var(--fs-3xs);
-  color: var(--dim2);
+/* 汇总表属性列数值可点击：打开目标编辑弹窗（目标值不占版面，悬浮提示显示） */
+.tbl td .tv.tv-click {
   cursor: pointer;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
 }
-.t-target:hover {
+.tbl td .tv.tv-click:hover {
   color: var(--gold-lt);
-}
-/* 未设目标的动作提示：「设定数值」打开弹窗自行填写；颜色与已设目标一致 */
-.t-set {
-  color: var(--dim2);
 }
 .t-set:hover {
   color: var(--gold-lt);

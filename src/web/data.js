@@ -137,7 +137,6 @@ export function statsMissingData() {
 export let userConfig = {
   charTargets: {},
   validStats: {},
-  notes: {},
   rowOrder: [],
   colOrder: [],
   view: 'roles',
@@ -165,13 +164,6 @@ export function readValidStats(name) {
   return (character.equipPlan?.plan_effective_property_list || [])
     .map((p) => (p.full_name && p.full_name.includes('百分比') ? `${p.name}%` : p.name))
     .filter((t) => SUBSTAT_TYPE_SET.has(t));
-}
-export function readNote(name) {
-  return userConfig.notes[name] || '';
-}
-export function saveNote(name, text) {
-  userConfig.notes[name] = text;
-  return saveUserConfig();
 }
 export function readRowOrder() {
   return userConfig.rowOrder || null;
@@ -245,7 +237,6 @@ export async function loadUserConfig() {
         {
           charTargets: {},
           validStats: {},
-          notes: {},
           rowOrder: [],
           colOrder: [],
           view: 'roles',
@@ -267,7 +258,6 @@ export async function loadUserConfig() {
       {
         charTargets: {},
         validStats: {},
-        notes: {},
         rowOrder: [],
         colOrder: [],
         view: 'roles',

@@ -100,7 +100,7 @@ export function charTargetInfo(name, attrs) {
     const savedN = Number(saved[a]);
     const hasTarget = Number.isFinite(savedN) && savedN > 0;
     out[a] = {
-      // target 只认已保存目标（不回退建议值）；suggestion 供「设定目标」弹窗参考
+      // target 只认已保存目标（不回退建议值）；suggestion 供属性列悬浮提示显示参考值
       target: hasTarget ? savedN : null,
       suggestion: r ? toTargetDisplay(a, r.suggestion) : null,
     };

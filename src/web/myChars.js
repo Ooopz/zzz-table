@@ -5,7 +5,6 @@ import {
   library,
   discIndex,
   statEntries,
-  readNote,
   readValidStats,
   readCharTarget,
   readColOrder,
@@ -83,7 +82,7 @@ function discTooltipFull(d, validSet) {
 /** 目标副词条缺口悬浮提示（表格「命中」用）。
  *  未配置目标时返回空串（不加悬浮）；已全部达成时提示无需额外副词条。
  *  ⚠️ 本函数返回体最终经 escapeHtml 存入 data-detail 属性，浏览器读 .dataset 时解码一次后按 HTML 执行
- *  （render.js showTip → tipEl.innerHTML 汇点）——凡是拼接进来的数据字面片段必须先 escapeHtml（与 charNote 同款约定）。 */
+ *  （render.js showTip → tipEl.innerHTML 汇点）——凡是拼接进来的数据字面片段必须先 escapeHtml（与 charDetail 同款约定）。 */
 function gapAdviceHtml(character, R) {
   const g = targetGap(character, R);
   if (!g) return '';
@@ -141,8 +140,9 @@ const tableSort = createSort();
 export function toggleTableSort(col) {
   tableSort.toggle(col);
 }
-/** 汇总表属性格悬浮：计算详情——当前/目标达成率 + 基础→加成→最终分解 + 各来源明细 + 账号实测差异 */
-function statDetailHtml(R, s, current, targetVal, rate) {
+/** 汇总表属性格悬浮：计算详情——当前/目标达成率 + 基础→加成→最终分解 + 各来源明细 + 账号实测差异。
+ *  suggestion 为未设目标时的推荐参考值（已按显示口径格式化）。 */
+function statDetailHtml(R, s, current, targetVal, rate, suggestion) {
   const fmt = (v) => formatValue(s, v);
   let src = s;
   let base = R.base?.[s];
@@ -164,6 +164,8 @@ function statDetailHtml(R, s, current, targetVal, rate) {
     parts.push(
       `<span style="color:var(--dim)">目标 ${fmt(targetInternal)} → 达成 <span class="${rateClass(rate)}">${(rate * 100).toFixed(0)}%</span></span>`
     );
+  } else if (suggestion != null) {
+    parts.push(`<span style="color:var(--dim)">参考目标 ${suggestion}</span>`);
   }
   if (final != null && base != null) {
     parts.push(`基础 ${fmt(base)} + 加成 ${fmt(bonus)} = 最终 <b>${fmt(final)}</b>`);
@@ -178,6 +180,7 @@ function statDetailHtml(R, s, current, targetVal, rate) {
     parts.push(
       `<span style="color:var(--dim);font-size:var(--fs-sm)">账号实测 ${fmt(act)}（推算 ${fmt(final)}）</span>`
     );
+  parts.push(`<span style="color:var(--dim2)">点击数值可设定/修改目标</span>`);
   return parts.join('<br>');
 }
 function cellStats(R, target, s, tInfo, name) {
@@ -194,24 +197,16 @@ function cellStats(R, target, s, tInfo, name) {
     targetVal == null || !Number(targetVal)
       ? null
       : current / (targetPercents.has(s) ? Number(targetVal) / 100 : Number(targetVal));
-  const tip = ` data-detail="${escapeHtml(statDetailHtml(R, s, current, targetVal, rate))}"`;
-  // 目标子行（并入列内）：已设目标 → 显示目标+P（点击手改）；未设但有建议 → 「设定目标」打开弹窗；两者都无 → 空
-  const info = tInfo?.[s];
-  let sub = '';
-  if (info?.target != null) {
-    sub = `<span class="t-target" onclick="ZZZ.goalEdit('${escapeJsAttr(name)}','${escapeJsAttr(s)}')">目标 ${info.target}</span>`;
-  } else if (info?.suggestion != null) {
-    // 未设目标但有建议 → 「设定目标」打开 goalEdit 弹窗，用户自行填写（不自动填默认值）
-    sub = `<span class="t-target t-set" onclick="ZZZ.goalEdit('${escapeJsAttr(name)}','${escapeJsAttr(s)}')">设定目标</span>`;
-  }
+  const tip = ` data-detail="${escapeHtml(statDetailHtml(R, s, current, targetVal, rate, tInfo?.[s]?.suggestion))}"`;
+  // 目标不占版面：点击数值本身打开 goalEdit 弹窗设定/修改，目标与参考值在悬浮提示里显示
   const row = (statusHtml) =>
-    `<div class="tstat-row"><span class="tv">${label}${formatValue(s, current)}</span>${statusHtml}</div>`;
-  if (rate == null) return `<td class="tstat"${tip}>${row('')}${sub}</td>`;
+    `<div class="tstat-row"><span class="tv tv-click" onclick="ZZZ.goalEdit('${escapeJsAttr(name)}','${escapeJsAttr(s)}')">${label}${formatValue(s, current)}</span>${statusHtml}</div>`;
+  if (rate == null) return `<td class="tstat"${tip}>${row('')}</td>`;
   // 达成率：圆形环绕百分比（替代横条+文字），绿/黄/红按 rateClass
   const pct = Math.min(100, rate * 100).toFixed(0);
   const ringC = { good: 'var(--green)', mid: 'var(--amber)', bad: 'var(--red)' }[rateClass(rate)] || 'var(--amber)';
   const ringHtml = `<div class="ring" style="--pct:${pct}%;--ring-c:${ringC}"><span class="ring-pct">${pct}%</span></div>`;
-  return `<td class="tstat"${tip}>${row(ringHtml)}${sub}</td>`;
+  return `<td class="tstat"${tip}>${row(ringHtml)}</td>`;
 }
 
 /** 未拥有角色灰行：库基础（图标/职业/属性）照常，个人数值/装备一律 —；不回退 wiki 推算。
@@ -289,18 +284,17 @@ export function renderTable(ownedList, container, { unowned = [] } = {}) {
     const cell = {};
 
     const charIcon = libCharacter?.icon || character.icon || ''; // library 优先（已内联）
-    const charNote = readNote(character.name);
-    // ⚠️ 备注是用户数据，必须先 escapeHtml 再拼入 charDetail：外层 :258 的 escapeHtml 只护 data-detail 属性，
+    // ⚠️ 用户数据必须先 escapeHtml 再拼入 charDetail：外层 :258 的 escapeHtml 只护 data-detail 属性，
     // 而浏览器读 .dataset 时已把实体解码回去（render.js showTip → tipEl.innerHTML 汇点会按原文执行）。
-    // 双层转义后悬浮框内显示字面文本，而非把备注里的标记当 HTML 执行。同一约定适用于下行的所有数据字面片段
+    // 双层转义后悬浮框内显示字面文本，而非把数据里的标记当 HTML 执行。同一约定适用于下行的所有数据字面片段
     //（角色名/职业属性等虽目前是游戏常量，仍统一 embed 转义，防未来混入用户可控字段）。
     const charMeta = [libCharacter?.rarity || '', libCharacter?.element || '', libCharacter?.trait || '', character.faction || libCharacter?.faction || '']
       .filter(Boolean)
       .map((s) => escapeHtml(s))
       .join(' · ');
-    const charDetail = `<b>${escapeHtml(character.name)}</b>${character.level ? `<br><span style="color:var(--dim)">Lv.${character.level}</span>` : ''}<br>${charMeta}${charNote ? `<br><span style="color:var(--acc)">备注：${escapeHtml(charNote)}</span>` : ''}`;
+    const charDetail = `<b>${escapeHtml(character.name)}</b>${character.level ? `<br><span style="color:var(--dim)">Lv.${character.level}</span>` : ''}<br>${charMeta}`;
     cell['角色'] =
-      `<td class="tchar"><span class="t-char-cell">${charIcon ? `<img class="t-ico" src="${charIcon}" loading="lazy" data-detail="${escapeHtml(charDetail)}" onclick="openNote('${escapeJsAttr(character.name)}')">` : escapeHtml(character.name)}<span class="t-actions"><button class="mini t-goal${expandedChar === character.name ? ' on' : ''}" data-detail="展开该角色的养成面板（技能/影画/觉醒 + 驱动盘重刷参考）" onclick="ZZZ.toggleGoalAcc('${escapeJsAttr(character.name)}')">养成</button><button class="mini" data-detail="配置该角色的推荐音擎/主词条/有效副词条" onclick="ZZZ.goalConfig('${escapeJsAttr(character.name)}')">配置</button></span></span></td>`;
+      `<td class="tchar"><span class="t-char-cell">${charIcon ? `<img class="t-ico" src="${charIcon}" loading="lazy" data-detail="${escapeHtml(charDetail)}">` : escapeHtml(character.name)}<span class="t-actions"><button class="mini t-goal${expandedChar === character.name ? ' on' : ''}" data-detail="展开该角色的养成面板（技能/影画/觉醒 + 驱动盘重刷参考）" onclick="ZZZ.toggleGoalAcc('${escapeJsAttr(character.name)}')">养成</button><button class="mini" data-detail="配置该角色的推荐音擎/主词条/有效副词条" onclick="ZZZ.goalConfig('${escapeJsAttr(character.name)}')">配置</button></span></span></td>`;
     cell['等级'] =
       `<td class="tlv">${character.level ? `Lv.${character.level}` : '<span class="ds-dim">—</span>'}</td>`;
     cell['职业'] = `<td class="tcls">${metaIconHtml(libCharacter?.trait) || escapeHtml(libCharacter?.trait || '—')}</td>`;

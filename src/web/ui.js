@@ -1,4 +1,4 @@
-// src/web/ui.js —— 交互层：目标/有效/备注/技能弹窗、事件绑定、初始化（URL 状态见 urlState.js，同步中心见 sync.js）
+// src/web/ui.js —— 交互层：目标/有效/技能弹窗、事件绑定、初始化（URL 状态见 urlState.js，同步中心见 sync.js）
 import { escapeHtml, escapeJsAttr, formatValue, createSort } from '../lib/util.js';
 import { registerZZZ } from './shared.js';
 // (弹窗勾选现为副词条粒度，无需 percentSubstats)
@@ -15,8 +15,6 @@ import {
   readCharTarget,
   saveCharTarget,
   readValidStats,
-  readNote,
-  saveNote,
   userConfig,
   saveUserConfig,
   loadUserConfig,
@@ -274,7 +272,7 @@ async function applyPlan(name, idx) {
 }
 registerZZZ({ applyPlan });
 
-// 练度规划·目标数值行内编辑（汇总表属性列点击「目标 N」→ 弹窗手改单个属性；name 传角色名，定 goalChar）
+// 练度规划·目标数值行内编辑（汇总表属性列点击数值 → 弹窗手改单个属性；name 传角色名，定 goalChar）
 let goalEditAttr = null;
 function openGoalEdit(name, attr) {
   if (name) setGoalChar(name);
@@ -300,25 +298,6 @@ function saveGoalEdit() {
   commitGoalEdit(document.getElementById('goalEditInput').value);
 }
 
-// 备注弹窗（点击头像）
-let currentNoteChar = null;
-function openNote(name) {
-  currentNoteChar = name;
-  document.getElementById('noteChar').textContent = name || '';
-  document.getElementById('noteInput').value = readNote(name);
-  document.getElementById('noteModal').classList.add('show');
-}
-async function saveNoteModal() {
-  if (!currentNoteChar) return;
-  const ok = await saveNote(currentNoteChar, document.getElementById('noteInput').value.trim());
-  document.getElementById('noteModal').classList.remove('show');
-  render();
-  if (ok) notify(`${currentNoteChar} 备注已保存`);
-}
-
-// 被表格内联 onclick 引用的函数，需挂到全局
-window.openNote = openNote;
-
 /** 初始化交互：绑定事件、加载配置（main.js 数据就绪后调用） */
 export function initUi() {
   // 视图持久化值一次性迁移（旧书签 ?view=recommend/discstats/card/table），必须先于 applyUrlState
@@ -343,7 +322,7 @@ export function initUi() {
   );
   // Esc / 点击遮罩可关闭的弹窗（goalEditModal 行内目标编辑此前漏在两份硬编码列表之外 → 只能点「关闭」按钮；
   // 用单一数组消除两份列表漂移）
-  const MODAL_IDS = ['targetModal', 'noteModal', 'helpModal', 'syncModal', 'skillModal', 'importModal', 'goalEditModal'];
+  const MODAL_IDS = ['targetModal', 'helpModal', 'syncModal', 'skillModal', 'importModal', 'goalEditModal'];
   // Esc 关闭当前弹窗
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
@@ -371,17 +350,6 @@ export function initUi() {
     document.getElementById('targetModal').classList.remove('show');
     render();
     if (ok) notify('已清空该角色养成配置');
-  });
-  document
-    .getElementById('noteClose')
-    .addEventListener('click', () => document.getElementById('noteModal').classList.remove('show'));
-  document.getElementById('noteSave').addEventListener('click', saveNoteModal);
-  document.getElementById('noteClear').addEventListener('click', async () => {
-    if (!currentNoteChar) return;
-    const ok = await saveNote(currentNoteChar, '');
-    document.getElementById('noteModal').classList.remove('show');
-    render();
-    if (ok) notify('已清空该角色备注');
   });
   // 技能每级数值弹窗（wiki 数据库视图技能图标点击打开）
   document
