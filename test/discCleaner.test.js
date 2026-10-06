@@ -307,7 +307,9 @@ test('真实数据冒烟：全部套装都有决策卡，判定合法、倾向�
   }
   assert.ok(keep > 0 && drop > 0, '全量下应同时出现保留与分解判定');
   assert.ok(cond > 0, '全量下应出现视词条判定');
-  // 已知语义抽查
+  // 已知语义抽查（只抽查「实况数据确实流入判定」；倾向的规则级断言在上方 computeTendency
+  // 单测里已确定性覆盖——活数据会随同步漂移（荆棘玫瑰出现实况 4件套用户后即非「未来套」），
+  // 这里不再对倾向做硬编码断言，只验合法性（见上方循环）。
   const z = computeDiscCleanCard({
     setName: '震星迪斯科',
     discDetail: details.get('震星迪斯科'),
@@ -316,13 +318,4 @@ test('真实数据冒烟：全部套装都有决策卡，判定合法、倾向�
     live2pc: l2,
   });
   assert.equal(z.mains[6].find((x) => x.name === '冲击力').verdict, 'keep', '击破套 6 号位冲击力应为保留');
-  assert.equal(z.tendency, '泛用4件套');
-  const t = computeDiscCleanCard({
-    setName: '荆棘玫瑰',
-    discDetail: details.get('荆棘玫瑰'),
-    recommend: recommendByName['荆棘玫瑰'],
-    live4pc: l4,
-    live2pc: l2,
-  });
-  assert.equal(t.tendency, '未来套', '荆棘玫瑰无实况 → 未来套');
 });
