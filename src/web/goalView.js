@@ -21,6 +21,7 @@ import {
   alignRoleName,
   skillDistItems,
   findLibraryWengine,
+  planBuildStats,
   roleIdFor,
 } from './wsRoles.js';
 import { synthTarget, toTargetDisplay, buildPanelItems } from '../lib/panelAdvice.js';
@@ -31,7 +32,7 @@ import { escapeHtml, escapeJsAttr, formatValue } from '../lib/util.js';
 import { richWeb } from './visual.js';
 import { emptyState, richItemHtml, skillIcon, substatRollsMark } from './shared.js';
 import { computeImproveProbs } from './discProb.js';
-import { computeRoleBuildsFromPlans, computeBuildBench } from '../lib/plansStats.js';
+import { computeBuildBench } from '../lib/plansStats.js';
 import { registerChart, chartBox, skillDistOption, panelDistOption, densityScatterOption } from './charts.js';
 import { CHART_HEIGHT } from './visual.js';
 
@@ -312,7 +313,7 @@ function skillDistChart(g) {
  *  数据层 = lib/plansStats.js 的 computeBuildBench（纯函数，我的/推荐/真实玩家三方结构化对照）；此处只拼 HTML。
  *  只并列展示、不做「换」判定——差异由玩家自看；无数据侧渲染「—」。 */
 function renderBuildBenchHtml(g) {
-  const planBuilds = computeRoleBuildsFromPlans(plans);
+  const planBuilds = planBuildStats();
   const pb = planBuilds[g.name] || null;
   const roles = workshopGrad.roles || [];
   const gr = roles.find((r) => r.name === g.name) || roles.find((r) => alignRoleName(r.name) === g.name) || null;

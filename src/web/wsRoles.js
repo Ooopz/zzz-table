@@ -2,7 +2,7 @@
 // 玩家分布面板、推荐三档统计等按引用失效的缓存（原 statsView.js 内嵌实现抽出，手风琴/总览视图共用）。
 // ⚠️ 单槽哨兵缓存（wsRoleIdMap / recTierStats / wsPanelMap / alignRoleName）全靠 workshopGrad/plans/panels 引用比较失效——搬移时逐字保留其引用守卫语义，勿在 import 期预建（会在 setData() 前冻结而永久陈旧）。
 import { plans, workshopGrad, workshopStats, charIndex, statsMissingData, myCharacters, wengineIndex } from './data.js';
-import { computeRecTierStats } from '../lib/plansStats.js';
+import { computeRecTierStats, computeRoleBuildsFromPlans } from '../lib/plansStats.js';
 import { CHAR_ALIASES, canonicalName, CATEGORY, resolveEntry } from '../lib/names.js';
 import { SKILL_TYPES } from '../game/index.js';
 import { emptyState } from './shared.js';
@@ -59,6 +59,18 @@ export function recTierStats() {
     _tierCache = computeRecTierStats(plans);
   }
   return _tierCache;
+}
+
+/** 每角色 Top 音擎/套装组合（plans → computeRoleBuildsFromPlans），按 plans 引用缓存。
+ *  手风琴配装对标每次展开都全量重算，但结果只随 plans 变化——与 recTierStats 同款单槽缓存。 */
+let _buildPlans = null;
+let _buildCache = null;
+export function planBuildStats() {
+  if (_buildPlans !== plans) {
+    _buildPlans = plans;
+    _buildCache = computeRoleBuildsFromPlans(plans);
+  }
+  return _buildCache;
 }
 
 /** grad/工坊名 → plans 标准角色名（resolver 优先；落空 CHAR_ALIASES + plans 子串）。
