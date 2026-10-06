@@ -200,23 +200,42 @@ export function percentileAt(dist, q) {
   return null;
 }
 
+/** 直方图累计边表（每箱左缘累计分位 0-100 + 总数），按 counts 数组引用 WeakMap 缓存——
+ *  histCumPct / histPctValue / 面板分布密度系列三处共用；读数线随鼠标移动逐次反查，原先每次都重算累计。
+ *  counts 全 0（total=0）也缓存 null，避免反复空算；bins 仅存引用不复制。 */
+const _histEdgesCache = new WeakMap();
+export function histEdges(hist) {
+  const bins = hist?.bins;
+  const counts = hist?.counts;
+  if (!bins?.length || !counts?.length) return null;
+  let hit = _histEdgesCache.get(counts);
+  if (hit === undefined) {
+    const total = counts.reduce((s, c) => s + c, 0);
+    hit = null;
+    if (total) {
+      let acc = 0;
+      const edges = [0];
+      for (let j = 0; j < counts.length; j++) {
+        acc += counts[j];
+        edges.push((acc / total) * 100);
+      }
+      hit = { bins, edges };
+    }
+    _histEdgesCache.set(counts, hit);
+  }
+  return hit;
+}
+
 /**
  * 直方图累计分位（0-100，值 → 玩家百分位，箱内线性插值）：用于「面板分布」图的分位轴——
  * 密度、我的点、推荐区间全部用同一累计口径，上下多属性行横向可比。
  * hist = {bins, counts}（computeDist 产物）；缺 hist 返回 null（调用方回退 approxPercentile）。
  */
 export function histCumPct(v, hist) {
-  if (v == null || !hist?.bins?.length || !hist?.counts?.length) return null;
-  const { bins, counts } = hist;
-  const total = counts.reduce((s, c) => s + c, 0);
-  if (!total) return null;
-  const n = counts.length;
-  let acc = 0;
-  const edges = [0]; // 每箱左缘累计分位（0-100）
-  for (let j = 0; j < n; j++) {
-    acc += counts[j];
-    edges.push((acc / total) * 100);
-  }
+  const h = histEdges(hist);
+  if (v == null || !h) return null;
+  const { bins, edges } = h;
+  const n = bins.length - 1;
   if (v <= bins[0]) return 0;
   if (v >= bins[n]) return 100;
   for (let j = 0; j < n; j++) {
@@ -230,17 +249,10 @@ export function histCumPct(v, hist) {
 
 /** 分位 → 值（histCumPct 的逆，直方图累计反查；缺 hist 返回 null） */
 export function histPctValue(pct, hist) {
-  if (pct == null || !hist?.bins?.length || !hist?.counts?.length) return null;
-  const { bins, counts } = hist;
-  const total = counts.reduce((s, c) => s + c, 0);
-  if (!total) return null;
-  const n = counts.length;
-  let acc = 0;
-  const edges = [0];
-  for (let j = 0; j < n; j++) {
-    acc += counts[j];
-    edges.push((acc / total) * 100);
-  }
+  const h = histEdges(hist);
+  if (pct == null || !h) return null;
+  const { bins, edges } = h;
+  const n = bins.length - 1;
   if (pct <= 0) return bins[0];
   if (pct >= 100) return bins[n];
   for (let j = 0; j < n; j++) {

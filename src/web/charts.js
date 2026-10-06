@@ -2,7 +2,7 @@
 // 颜色/字号统一来自 visual.js（唯一权威，对应 style.css :root），本模块不重复声明色板
 /* global echarts */
 import { formatValue } from '../lib/util.js';
-import { histCumPct, histPctValue } from '../lib/distStats.js';
+import { histCumPct, histPctValue, histEdges } from '../lib/distStats.js';
 import { PALETTE, SOFT, RANK, FONT, CHART_HEIGHT, CHART_AUX } from './visual.js';
 
 /** 坐标轴/网格/标签（统一引用主题色） */
@@ -328,16 +328,13 @@ export function panelDistOption(items) {
     const densData = [];
     if (hist?.counts?.length) {
       const counts = hist.counts;
-      const total = counts.reduce((s, c) => s + c, 0) || 1;
-      let acc = 0;
-      const edges = [0]; // 每箱左缘累计分位
-      for (let j = 0; j < counts.length; j++) {
-        acc += counts[j];
-        edges.push((acc / total) * 100);
+      const h = histEdges(hist); // 复用 distStats 共享累计边表（与 pctOf/valOf/读数线同一份缓存）
+      if (h) {
+        const { edges } = h;
+        densData.push([0, 0]);
+        for (let j = 0; j < counts.length; j++) densData.push([(edges[j] + edges[j + 1]) / 2, counts[j]]);
+        densData.push([100, 0]);
       }
-      densData.push([0, 0]);
-      for (let j = 0; j < counts.length; j++) densData.push([(edges[j] + edges[j + 1]) / 2, counts[j]]);
-      densData.push([100, 0]);
     }
     if (densData.length) {
       const bl = pctOf(item, b.low);
