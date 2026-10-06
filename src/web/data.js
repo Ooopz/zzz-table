@@ -134,7 +134,9 @@ export function statsMissingData() {
 // ---------- 元素颜色（属性展示用） ----------
 
 // ---------- 用户配置（目标/有效词条/表格顺序/视图），经服务器持久化到 data/user-config.json ----------
-export let userConfig = {
+/** config 默认值工厂（每次调用产新对象，防止 Object.assign 把默认数组/对象引用共享出去被就地污染）。
+ *  三处共用：初始值、静态模式合入、服务器合入——此前是三份字面量，已实际漂移（server 块漏 showAll）。 */
+const defaultConfig = () => ({
   charTargets: {},
   validStats: {},
   rowOrder: [],
@@ -143,7 +145,8 @@ export let userConfig = {
   showAll: true, // 「角色」视图默认全显（含未拥有灰行）；false = 只看已拥有
   discWeights: {},
   discCleanOverrides: {},
-};
+});
+export let userConfig = defaultConfig();
 export function readCharTarget(name) {
   return userConfig.charTargets[name] || {};
 }
@@ -232,20 +235,7 @@ export async function loadUserConfig() {
   if (isStatic()) {
     const c = readLS(LS.config);
     if (c) {
-      Object.assign(
-        userConfig,
-        {
-          charTargets: {},
-          validStats: {},
-          rowOrder: [],
-          colOrder: [],
-          view: 'roles',
-          showAll: true,
-          discWeights: {},
-          discCleanOverrides: {},
-        },
-        c
-      );
+      Object.assign(userConfig, defaultConfig(), c);
       normalizeLegacyView();
     }
     return;
@@ -253,19 +243,7 @@ export async function loadUserConfig() {
   const j = await apiRequest('/api/config', { method: 'GET' });
   if (j && j.ok && j.config) {
     // 原地修改同一对象（render/ui 持有其引用），而不是重新赋值 let 变量
-    Object.assign(
-      userConfig,
-      {
-        charTargets: {},
-        validStats: {},
-        rowOrder: [],
-        colOrder: [],
-        view: 'roles',
-        discWeights: {},
-        discCleanOverrides: {},
-      },
-      j.config
-    );
+    Object.assign(userConfig, defaultConfig(), j.config);
     normalizeLegacyView();
   }
 }
