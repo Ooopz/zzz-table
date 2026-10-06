@@ -53,9 +53,10 @@ function fixedPanel(libChar, libWengine, mains) {
   ];
   for (const { slot, name } of slots) {
     if (!name) continue;
+    const mn = mainStatName(name);
     const table = DISC_MAIN_STAT_S[slot] || {};
-    const value = table[mainStatName(name)] ?? table[name];
-    if (value != null) accumulate(mainStatForPanel(mainStatName(name)), value);
+    const value = table[mn] ?? table[name];
+    if (value != null) accumulate(mainStatForPanel(mn), value);
   }
 
   const final = {};
