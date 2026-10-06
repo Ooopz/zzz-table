@@ -187,11 +187,10 @@ export function calculateCharacter(character) {
 
   // 核心技（核心被动）当前等级：账号 skills 里 type=5；缺失时默认满级 7
   const coreLevel = character.skills?.find((s) => s.type === SKILL.CORE)?.level ?? 7;
-  const wengineAtk =
-    statEntries(wengine.mainStats).find((t) => t.name === '基础攻击力')?.value ?? libWengine?.baseAtk ?? 0;
+  const wengineMain = statEntries(wengine.mainStats);
+  const wengineAtk = wengineMain.find((t) => t.name === '基础攻击力')?.value ?? libWengine?.baseAtk ?? 0;
   // 防御型音擎（2026 新增 基础防御力 主属性）：白值进「防御力」，攻击侧为 0
-  const wengineDefAtk =
-    statEntries(wengine.mainStats).find((t) => t.name === '基础防御力')?.value ?? libWengine?.baseDef ?? 0;
+  const wengineDefAtk = wengineMain.find((t) => t.name === '基础防御力')?.value ?? libWengine?.baseDef ?? 0;
   // wiki 推算基础值（最终面板推算路径与理论面板共用；贯穿力为派生属性，末尾统一计算）
   const theoBase = {};
   for (const s of panelOrder) {
@@ -212,7 +211,8 @@ export function calculateCharacter(character) {
   const pct = {},
     flat = {},
     damageBonus = {};
-  const accumulate = (name, value) => accumulateBonus({ damage: damageBonus, flat, pct }, name, value);
+  const bonusTargets = { damage: damageBonus, flat, pct }; // 复用同一 targets 对象，避免每词条一次分配
+  const accumulate = (name, value) => accumulateBonus(bonusTargets, name, value);
   const sources = {};
   function recordSource(name, label, value) {
     if (value == null) return;
@@ -315,12 +315,11 @@ export function rateClass(rate) {
 /** 单个属性相对该角色目标的达成率；未设目标返回 null；不封顶（可 >100%） */
 export function statProgress(character, R, name) {
   const targetVal = ctx.readCharTarget(character.name)[name];
-  if (targetVal == null || targetVal === '' || !Number.isFinite(Number(targetVal)) || Number(targetVal) <= 0)
-    return null;
+  const targetNum = Number(targetVal);
+  if (targetVal == null || targetVal === '' || !Number.isFinite(targetNum) || targetNum <= 0) return null;
   const current = resolveStatCurrent(R, name);
   if (current == null) return null;
-  let targetInternal = Number(targetVal);
-  if (targetPercents.has(name)) targetInternal = targetVal / 100;
+  const targetInternal = targetPercents.has(name) ? targetNum / 100 : targetNum;
   return { rate: current / targetInternal };
 }
 
@@ -337,25 +336,20 @@ function fullBase(R, name) {
   return (name === STAT.ATK ? libVal + (R.libWengine?.baseAtk ?? 0) : libVal) + core;
 }
 
+/** 百分比目标属性（攻击/生命/防御）的缺口建议工厂：三条同构规则合一 */
+const pctGapAdvice = (stat, pctType, flatType) => (R) => ({
+  type: pctType,
+  gain: fullBase(R, stat) * substatGrowthTable.S[pctType],
+  gainFlat: substatGrowthTable.S[flatType],
+});
+
 /** 目标属性 → 副词条类型与每词条收益（S 级成长值）。
  *  gain 为百分比词条收益，gainFlat 为固定值词条收益（攻击/生命/防御有 % 与固定值两种形态）；
  *  其余属性（冲击力/穿透率/能量自动回复/伤害加成等）无法通过副词条补足，不在表中。 */
 const GAP_ADVICE = {
-  [STAT.ATK]: (R) => ({
-    type: SUBSTAT.ATK_PCT,
-    gain: fullBase(R, STAT.ATK) * substatGrowthTable.S[SUBSTAT.ATK_PCT],
-    gainFlat: substatGrowthTable.S[SUBSTAT.ATK],
-  }),
-  [STAT.HP]: (R) => ({
-    type: SUBSTAT.HP_PCT,
-    gain: fullBase(R, STAT.HP) * substatGrowthTable.S[SUBSTAT.HP_PCT],
-    gainFlat: substatGrowthTable.S[SUBSTAT.HP],
-  }),
-  [STAT.DEF]: (R) => ({
-    type: SUBSTAT.DEF_PCT,
-    gain: fullBase(R, STAT.DEF) * substatGrowthTable.S[SUBSTAT.DEF_PCT],
-    gainFlat: substatGrowthTable.S[SUBSTAT.DEF],
-  }),
+  [STAT.ATK]: pctGapAdvice(STAT.ATK, SUBSTAT.ATK_PCT, SUBSTAT.ATK),
+  [STAT.HP]: pctGapAdvice(STAT.HP, SUBSTAT.HP_PCT, SUBSTAT.HP),
+  [STAT.DEF]: pctGapAdvice(STAT.DEF, SUBSTAT.DEF_PCT, SUBSTAT.DEF),
   [STAT.CR]: () => ({ type: STAT.CR, gain: substatGrowthTable.S[STAT.CR] }),
   [STAT.CD]: () => ({ type: STAT.CD, gain: substatGrowthTable.S[STAT.CD] }),
   [STAT.ANOMALY_PROF]: () => ({ type: STAT.ANOMALY_PROF, gain: substatGrowthTable.S[STAT.ANOMALY_PROF] }),
