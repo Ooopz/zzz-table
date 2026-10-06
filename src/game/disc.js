@@ -127,7 +127,7 @@ export const substatGrowthTable = Object.freeze({
 
 // A4：副词条形态判定（% vs 固定）。暴击/暴伤恒为 %；其余按数值大小（≤1 视为百分比）。
 export function substatType(name, value) {
-  return [STAT.CR, STAT.CD].includes(name) ? name : value <= 1 ? name + '%' : name;
+  return name === STAT.CR || name === STAT.CD ? name : value <= 1 ? name + '%' : name;
 }
 
 // C4：还原一条副词条的强化次数（1-6）。值统一为 ×100 整数百分比（480 = 4.8%，归一化后无字符串形态）。
@@ -344,10 +344,7 @@ export function mainStatForPanel(name) {
 /** 槽位 → 该位主词条对应的副词条类型（用于「副词条不与主词条重复」约束）：
  *  123 号位 = 固定主词条本身（SLOT_FIXED_MAIN），456 号位 = 主词条名经 mainStatName 归一（% 变体/特殊词条原样）。 */
 export function mainTypeForSlot(slot, mains) {
-  if (slot === 1) return STAT.HP;
-  if (slot === 2) return STAT.ATK;
-  if (slot === 3) return STAT.DEF;
-  return mainStatName(mains[slot]) || '';
+  return SLOT_FIXED_MAIN[slot] ?? (mainStatName(mains[slot]) || '');
 }
 
 // ============================================================
@@ -412,11 +409,12 @@ export function computeDiscProb(types, goal, directedTypes = [], op = '>') {
     for (let i = 0; i < rest.length; i++) {
       const t = rest[i];
       if (t.rest <= 0) continue;
-      const next = rest.map((x) => ({ ...x }));
-      next[i].rest--;
+      // 回溯原地改 rest（先减后恢复），替代每层全量拷贝数组——枚举树上万节点时省掉巨量分配
+      t.rest--;
       chosen.push(t);
-      pick(next, chosen, scoreSum + t.score, weight * (t.specialWeight / total));
+      pick(rest, chosen, scoreSum + t.score, weight * (t.specialWeight / total));
       chosen.pop();
+      t.rest++;
     }
   })(
     types.map((t) => ({ ...t })),
@@ -557,11 +555,12 @@ function computeDiscProbKeep(types, goal, minHits, directedTypes = []) {
     for (let i = 0; i < rest.length; i++) {
       const t = rest[i];
       if (t.rest <= 0) continue;
-      const next = rest.map((x) => ({ ...x }));
-      next[i].rest--;
+      // 同 computeDiscProb：回溯原地改 rest，免每层全量拷贝
+      t.rest--;
       chosen.push(t);
-      pick(next, chosen, weight * (t.specialWeight / total));
+      pick(rest, chosen, weight * (t.specialWeight / total));
       chosen.pop();
+      t.rest++;
     }
   })(
     types.map((t) => ({ ...t })),
