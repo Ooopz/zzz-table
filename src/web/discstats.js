@@ -53,6 +53,32 @@ function prune(name) {
   if (!Object.keys(s).length) delete ensureOverrides()[name];
 }
 
+/** 备注编辑（总览最右列，用户自定义内容；持久化到覆盖 note 字段，留空即清除） */
+function openNoteEditor(name) {
+  listEditorState = { name, field: 'note' };
+  const note = ensureOverrides()[name]?.note || '';
+  const box = listBox();
+  box.innerHTML =
+    `<div class="disc-list-editor-head">备注 · ${escapeHtml(name)}</div>` +
+    `<div class="disc-list-editor-body"><textarea id="discNoteInput" rows="5" style="grid-column:1/-1;width:100%" placeholder="自定义备注，留空保存即清除">${escapeHtml(note)}</textarea></div>` +
+    `<div class="disc-list-editor-foot">` +
+    `<button class="mini" onclick="ZZZ.discSaveNote()">保存</button>` +
+    `<button class="mini" onclick="ZZZ.discCloseList()">取消</button>` +
+    `</div>`;
+  box.classList.add('show');
+}
+function saveNote() {
+  const { name } = listEditorState || {};
+  if (!name) return;
+  const v = document.getElementById('discNoteInput')?.value.trim() || '';
+  const o = ensureOverrides();
+  if (v) (o[name] = o[name] || {}).note = v;
+  else if (o[name]) delete o[name].note;
+  prune(name);
+  persist();
+  closeList();
+}
+
 const TENDENCY_OPTIONS = ['泛用4件套', '角色专属套', '仅2件套可用', '未来套', '冷门'];
 const ARCHETYPE_OPTIONS = Object.keys(ARCHETYPE_MAIN_RULES);
 
@@ -220,6 +246,8 @@ registerZZZ({
   discOpenList: (name, field) => openListEditor(name, field),
   discSaveList: () => saveList(),
   discCloseList: () => closeList(),
+  discOpenNote: (name) => openNoteEditor(name),
+  discSaveNote: () => saveNote(),
   discResetOverride: (name, field) => resetOverride(name, field),
   discResetAllOverrides: () => resetAllOverrides(),
 });
@@ -471,6 +499,7 @@ function discIconHtml(name) {
 
 /** 全套装清理速查总览（判定倾向降序，点击行选中套装） */
 function overviewHtml(rows) {
+  const ovs = ensureOverrides();
   const trs = rows
     .map(
       (r) =>
@@ -480,6 +509,9 @@ function overviewHtml(rows) {
         `<td>${r.labels.map((l) => `<span class="ad-chip ad-chip-arc">${escapeHtml(l)}</span>`).join('') || '<span class="ds-dim">—</span>'}</td>` +
         `<td class="ad-ov-users-cell">${users4Html(r.users4, r.users4Fb)}</td>` +
         `<td class="ds-dim">${r.n2 ? `${r.n2} 人` : '—'}</td>` +
+        `<td class="ad-ov-note-cell" onclick="event.stopPropagation(); ZZZ.discOpenNote('${escapeJsAttr(r.name)}')">` +
+        (ovs[r.name]?.note ? escapeHtml(ovs[r.name].note) : '<span class="ds-dim">＋</span>') +
+        `</td>` +
         `</tr>`
     )
     .join('');
@@ -488,7 +520,7 @@ function overviewHtml(rows) {
   return `<div class="ad-card ad-overview">
     <h3>全套装清理速查 <button class="chart-hint" data-hint="${escapeHtml(tip)}">?</button></h3>
     <div class="coverage-table-wrap"><table class="rec-table ad-overview-table">
-      <thead><tr><th>套装</th><th>判定倾向</th><th>4件套适配职业</th><th data-detail="把这套当 4 件套主套穿戴的角色（工坊玩家实况）；无实况使用时托底官方 wiki 推荐（带「官方」标）">4件套 适配角色</th><th data-detail="把这套当 2 件套散件凑效果的角色（工坊玩家实况）——判断这套的泛用填充价值">2件套 散件</th></tr></thead>
+      <thead><tr><th>套装</th><th>判定倾向</th><th>4件套适配职业</th><th data-detail="把这套当 4 件套主套穿戴的角色（工坊玩家实况）；无实况使用时托底官方 wiki 推荐（带「官方」标）">4件套 适配角色</th><th data-detail="把这套当 2 件套散件凑效果的角色（工坊玩家实况）——判断这套的泛用填充价值">2件套 散件</th><th data-detail="用户自定义备注：点击单元格填写，持久化到本地配置">备注</th></tr></thead>
       <tbody>${trs}</tbody>
     </table></div>
   </div>`;

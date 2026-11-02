@@ -1748,6 +1748,15 @@ main {
 .ad-ov-users-cell {
   min-width: 90px;
 }
+.ad-ov-note-cell {
+  cursor: pointer;
+  max-width: 220px;
+  min-width: 60px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  color: var(--fg);
+}
 .ad-ov-users {
   display: inline-flex;
   align-items: center;
@@ -1998,6 +2007,17 @@ main {
 }
 .modal-box.modal-wide {
   width: min(980px, 94vw);
+}
+/* 数据导入弹窗：采集步骤有序列表 */
+.import-steps {
+  margin: 0 0 12px;
+  padding-left: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+}
+.import-steps li {
+  margin: 0 0 10px;
+  line-height: 1.7;
 }
 /* 弹窗标题条：金细线 + 四角括号 */
 .modal-box::before {
